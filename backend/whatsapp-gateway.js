@@ -10,16 +10,16 @@ console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');
 
 const client = new Client({
     // 1. ASIGNAMOS UN ID ÚNICO PARA QUE LA CARPETA DE SESIÓN NO SE MEZCLE
-    authStrategy: new LocalAuth({ 
-        clientId: "bot-pasteleria-v1" 
+    authStrategy: new LocalAuth({
+        clientId: "bot-pasteleria-v1"
     }),
     puppeteer: {
         // --- CAMBIO IMPORTANTE ---
         // 'false' hace que se abra la ventana visible de Google Chrome
         // 'true' haría que fuera invisible (como estaba antes)
-        headless: false, 
+        headless: false,
         args: [
-            '--no-sandbox', 
+            '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-accelerated-2d-canvas',
@@ -122,3 +122,53 @@ client.on('message_create', async (msg) => {
 });
 
 client.initialize();
+
+// --- SERVIDOR HTTP PARA ENVIAR MENSAJES (API LOCAL) ---
+const express = require('express');
+const app = express();
+const PORT = 3001; // Puerto diferente al del backend principal (3000)
+
+app.use(express.json());
+
+// Endpoint para enviar mensajes desde el Backend
+app.post('/send', async (req, res) => {
+    const { phone, message, mediaUrl } = req.body;
+
+    if (!phone || !message) {
+        return res.status(400).json({ error: 'Faltan datos: phone y message son obligatorios.' });
+    }
+
+    try {
+        console.log(`📨 Solicitud de envío a ${phone}: "${message.substring(0, 50)}..."`);
+
+        // Formatear el número (asegurar @c.us - para México suele ser 521...)
+        // Nota: whatsapp-web.js a veces requiere 521 para personales y 52 para business en MX.
+        // Aquí asumimos que el backend envía el número limpio o semi-limpio.
+        // Una estrategia simple es quitar '+' y asegurar sufijo.
+        let chatId = phone.replace(/[^0-9]/g, '');
+        if (!chatId.endsWith('@c.us')) {
+            chatId += '@c.us';
+        }
+
+        // Enviar Texto
+        await client.sendMessage(chatId, message);
+
+        // Enviar Media si existe (Opcional - por implementar con MessageMedia.fromUrl si se requiere)
+        if (mediaUrl) {
+            // const media = await MessageMedia.fromUrl(mediaUrl);
+            // await client.sendMessage(chatId, media);
+            console.log('⚠️ Envío de media no implementado completamente en este snippet, solo texto enviado.');
+        }
+
+        console.log(`✅ Mensaje enviado a ${phone}`);
+        res.json({ success: true, message: 'Mensaje en cola de envío.' });
+
+    } catch (error) {
+        console.error('❌ Error al enviar mensaje vía API:', error);
+        res.status(500).json({ error: 'Error interno al enviar mensaje.', details: error.message });
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`🚀 Gateway API escuchando en http://localhost:${PORT}`);
+});

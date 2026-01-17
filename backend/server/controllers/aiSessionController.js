@@ -1,67 +1,69 @@
 const { AISession, Folio, Client, sequelize } = require('../models');
 // Asegúrate que la ruta sea correcta según tu estructura
+// Asegúrate que la ruta sea correcta según tu estructura
 const { getNextAssistantResponse } = require('../services/aiConversationService');
 const folioController = require('./folioController'); // Importamos para reutilizar la lógica de creación
+const NotificationService = require('../services/notificationService'); // Importar NotificationService
 
 // --- FUNCIONES DE HERRAMIENTA (TOOLS) ---
 
 // Función para actualizar los datos de la sesión basados en la llamada de la IA
 async function update_folio_data(session, updates) {
-  console.log('⚡ Ejecutando herramienta: update_folio_data con:', updates);
-  // Validación básica de los updates
-  if (!updates || typeof updates !== 'object' || updates === null || Object.keys(updates).length === 0) {
-    console.warn("Llamada a update_folio_data inválida o sin datos. Argumentos:", updates);
-    // Devuelve un mensaje de error claro que la IA pueda interpretar
-    return "Error: No se proporcionaron datos válidos en formato de objeto para actualizar.";
-  }
-
-  try {
-    // Obtener datos actuales de forma segura, asegurando que sea un objeto
-    const currentExtractedData = (typeof session.extractedData === 'object' && session.extractedData !== null)
-                                   ? JSON.parse(JSON.stringify(session.extractedData)) // Clonar para evitar mutación directa
-                                   : {};
-
-    // --- Lógica mejorada para manejar arrays y strings ---
-    let updatedData = { ...currentExtractedData }; // Empezar con una copia
-
-    for (const key in updates) {
-        if (Object.hasOwnProperty.call(updates, key)) {
-            const newValue = updates[key];
-            // Para arrays, reemplaza completamente con el nuevo array.
-            if (['tiers', 'complements', 'additional', 'cakeFlavor', 'filling'].includes(key) && Array.isArray(newValue)) {
-                 console.log(`[Session ${session.id}] Actualizando array '${key}' completo.`);
-                 updatedData[key] = newValue;
-            } else if (key === 'accessories' && typeof newValue === 'string' && typeof updatedData[key] === 'string' && updatedData[key]) {
-                 // Si accessories ya tiene algo y lo nuevo es string, concatenar.
-                 updatedData[key] = `${updatedData[key]}, ${newValue}`;
-                 console.log(`[Session ${session.id}] Concatenando accesorios a '${key}'.`);
-            }
-             else {
-                 // Actualización/reemplazo simple para otros campos.
-                 updatedData[key] = newValue;
-                 console.log(`[Session ${session.id}] Actualizando campo '${key}'.`);
-            }
-        }
+    console.log('⚡ Ejecutando herramienta: update_folio_data con:', updates);
+    // Validación básica de los updates
+    if (!updates || typeof updates !== 'object' || updates === null || Object.keys(updates).length === 0) {
+        console.warn("Llamada a update_folio_data inválida o sin datos. Argumentos:", updates);
+        // Devuelve un mensaje de error claro que la IA pueda interpretar
+        return "Error: No se proporcionaron datos válidos en formato de objeto para actualizar.";
     }
 
+    try {
+        // Obtener datos actuales de forma segura, asegurando que sea un objeto
+        const currentExtractedData = (typeof session.extractedData === 'object' && session.extractedData !== null)
+            ? JSON.parse(JSON.stringify(session.extractedData)) // Clonar para evitar mutación directa
+            : {};
 
-    // Validar/Limpiar estructura final según folioType
-     if (updatedData.folioType === 'Base/Especial') {
-         updatedData.cakeFlavor = null; // O []
-         updatedData.filling = null;    // O []
-     } else if (updatedData.folioType === 'Normal') {
-         updatedData.tiers = null; // O []
-     }
+        // --- Lógica mejorada para manejar arrays y strings ---
+        let updatedData = { ...currentExtractedData }; // Empezar con una copia
+
+        for (const key in updates) {
+            if (Object.hasOwnProperty.call(updates, key)) {
+                const newValue = updates[key];
+                // Para arrays, reemplaza completamente con el nuevo array.
+                if (['tiers', 'complements', 'additional', 'cakeFlavor', 'filling'].includes(key) && Array.isArray(newValue)) {
+                    console.log(`[Session ${session.id}] Actualizando array '${key}' completo.`);
+                    updatedData[key] = newValue;
+                } else if (key === 'accessories' && typeof newValue === 'string' && typeof updatedData[key] === 'string' && updatedData[key]) {
+                    // Si accessories ya tiene algo y lo nuevo es string, concatenar.
+                    updatedData[key] = `${updatedData[key]}, ${newValue}`;
+                    console.log(`[Session ${session.id}] Concatenando accesorios a '${key}'.`);
+                }
+                else {
+                    // Actualización/reemplazo simple para otros campos.
+                    updatedData[key] = newValue;
+                    console.log(`[Session ${session.id}] Actualizando campo '${key}'.`);
+                }
+            }
+        }
 
 
-    session.extractedData = updatedData; // Guardar los datos actualizados en el objeto de sesión (en memoria)
-    console.log(`[Session ${session.id}] Datos después de update_folio_data:`, JSON.stringify(session.extractedData, null, 2));
-    return "Datos actualizados exitosamente."; // Mensaje de éxito para la IA
+        // Validar/Limpiar estructura final según folioType
+        if (updatedData.folioType === 'Base/Especial') {
+            updatedData.cakeFlavor = null; // O []
+            updatedData.filling = null;    // O []
+        } else if (updatedData.folioType === 'Normal') {
+            updatedData.tiers = null; // O []
+        }
 
-  } catch (error) {
-      console.error(`[Session ${session.id}] Error dentro de update_folio_data:`, error);
-      return `Error al procesar la actualización de datos: ${error.message}`; // Mensaje de error para la IA
-  }
+
+        session.extractedData = updatedData; // Guardar los datos actualizados en el objeto de sesión (en memoria)
+        console.log(`[Session ${session.id}] Datos después de update_folio_data:`, JSON.stringify(session.extractedData, null, 2));
+        return "Datos actualizados exitosamente."; // Mensaje de éxito para la IA
+
+    } catch (error) {
+        console.error(`[Session ${session.id}] Error dentro de update_folio_data:`, error);
+        return `Error al procesar la actualización de datos: ${error.message}`; // Mensaje de error para la IA
+    }
 }
 
 
@@ -100,7 +102,7 @@ async function generate_folio_pdf(session, req /* Sin transaction aquí */) {
             // Asegurar formato [{name, hasCost}] para filling
             filling: JSON.stringify(
                 Array.isArray(folioData.filling)
-                    ? folioData.filling.map(f => (typeof f === 'string' ? { name: f, hasCost: false } : (f || {name: 'Inválido', hasCost: false})))
+                    ? folioData.filling.map(f => (typeof f === 'string' ? { name: f, hasCost: false } : (f || { name: 'Inválido', hasCost: false })))
                     : []
             ),
             tiers: JSON.stringify(Array.isArray(folioData.tiers) ? folioData.tiers : []),
@@ -114,10 +116,10 @@ async function generate_folio_pdf(session, req /* Sin transaction aquí */) {
             accessories: folioData.accessories || null,
             // Asegurar formato [{name, price}] para additional
             additional: JSON.stringify(
-                 Array.isArray(folioData.additional)
-                     ? folioData.additional.map(a => ({ name: a?.name || 'Adicional inválido', price: a?.price || 0 }))
-                     : []
-             ),
+                Array.isArray(folioData.additional)
+                    ? folioData.additional.map(a => ({ name: a?.name || 'Adicional inválido', price: a?.price || 0 }))
+                    : []
+            ),
             complements: JSON.stringify(Array.isArray(folioData.complements) ? folioData.complements : []),
             isPaid: folioData.isPaid || false,
             hasExtraHeight: folioData.hasExtraHeight || false,
@@ -139,13 +141,13 @@ async function generate_folio_pdf(session, req /* Sin transaction aquí */) {
                 if (code >= 200 && code < 300 && data && data.folioNumber) {
                     newFolio = data;
                 } else {
-                     newFolio = { error: data?.message || `Error ${code} al crear folio.` };
-                 }
+                    newFolio = { error: data?.message || `Error ${code} al crear folio.` };
+                }
             }
         }),
         send: (message) => { // Capturar si usa res.send
             console.warn(`[Session ${session.id}] folioController.createFolio usó res.send:`, message);
-             if (!newFolio) newFolio = { error: message };
+            if (!newFolio) newFolio = { error: message };
         }
     };
 
@@ -154,14 +156,22 @@ async function generate_folio_pdf(session, req /* Sin transaction aquí */) {
         await folioController.createFolio(mockReq, mockRes /* Sin transaction */);
 
         if (newFolio && newFolio.error) {
-             throw new Error(newFolio.error);
+            throw new Error(newFolio.error);
         }
         if (!newFolio || !newFolio.folioNumber) {
-             throw new Error("La creación del folio no devolvió la información esperada.");
+            throw new Error("La creación del folio no devolvió la información esperada.");
         }
 
         session.status = 'completed'; // Marcar sesión como completada EN MEMORIA
         console.log(`[Session ${session.id}] Marcada como 'completed'.`);
+
+        // --- NOTIFICACIÓN WHATSAPP ---
+        // Enviar mensaje de confirmación al cliente
+        if (clientPhone) {
+            const confirmationMsg = `🎉 ¡Pedido Confirmado!\n\nTu folio es: *${newFolio.folioNumber}*\nTotal a pagar: $${folioData.total}\n\nGracias por tu preferencia.`;
+            NotificationService.sendWhatsApp(clientPhone, confirmationMsg);
+        }
+
         // Devolver mensaje de éxito para la IA y el historial
         return `¡Folio ${newFolio.folioNumber} creado exitosamente! La sesión ha finalizado.`;
 
@@ -232,14 +242,14 @@ exports.postChatMessage = async (req, res) => {
             await t.rollback();
             return res.status(404).json({ message: 'Sesión no encontrada.' });
         }
-         if (session.status !== 'active') {
-             await t.rollback();
-             return res.status(400).json({ message: `La sesión ya está ${session.status}. No se pueden procesar más mensajes.` });
-         }
-         console.log(`[Session ${sessionId}] Mensaje Usuario: "${userMessageContent}"`);
-         const existingHistory = session.chatHistory ? JSON.parse(JSON.stringify(session.chatHistory)) : [];
-         // Verificación de consistencia del historial
-         if (existingHistory.length > 0) {
+        if (session.status !== 'active') {
+            await t.rollback();
+            return res.status(400).json({ message: `La sesión ya está ${session.status}. No se pueden procesar más mensajes.` });
+        }
+        console.log(`[Session ${sessionId}] Mensaje Usuario: "${userMessageContent}"`);
+        const existingHistory = session.chatHistory ? JSON.parse(JSON.stringify(session.chatHistory)) : [];
+        // Verificación de consistencia del historial
+        if (existingHistory.length > 0) {
             const lastMsg = existingHistory[existingHistory.length - 1];
             if (lastMsg.role === 'assistant' && lastMsg.tool_calls) {
                 console.error(`[Session ${sessionId}] ¡ERROR DE CONSISTENCIA! Historial termina con tool_calls pendientes.`);
@@ -273,17 +283,17 @@ exports.postChatMessage = async (req, res) => {
                 const functionName = toolCall.function.name;
                 let functionArgs = {};
 
-                 // Parseo de argumentos
-                 try {
+                // Parseo de argumentos
+                try {
                     if (typeof toolCall.function.arguments === 'string' && toolCall.function.arguments.trim()) {
                         functionArgs = JSON.parse(toolCall.function.arguments);
                     } else if (functionName !== 'generate_folio_pdf') { // generate_folio_pdf no necesita args
-                         throw new Error("Argumentos faltantes o inválidos.");
+                        throw new Error("Argumentos faltantes o inválidos.");
                     }
                 } catch (parseError) {
                     console.error(`[Session ${sessionId}] Error parseando args para ${functionName}:`, parseError);
-                     toolMessages.push({ tool_call_id: toolCall.id, role: 'tool', name: functionName, content: `Error: Argumentos inválidos - ${parseError.message}` });
-                     continue; // Saltar a la siguiente herramienta si falla el parseo
+                    toolMessages.push({ tool_call_id: toolCall.id, role: 'tool', name: functionName, content: `Error: Argumentos inválidos - ${parseError.message}` });
+                    continue; // Saltar a la siguiente herramienta si falla el parseo
                 }
 
                 let functionResult = "";
@@ -305,19 +315,19 @@ exports.postChatMessage = async (req, res) => {
                     } else {
                         functionResult = `Error: Función desconocida "${functionName}".`;
                     }
-                 } catch (toolExecError) {
+                } catch (toolExecError) {
                     console.error(`[Session ${sessionId}] Error EJECUTANDO ${functionName}:`, toolExecError);
                     functionResult = `Error al ejecutar la herramienta: ${toolExecError.message}`;
-                 }
+                }
 
                 if (typeof functionResult !== 'string') functionResult = JSON.stringify(functionResult);
                 console.log(`[Session ${sessionId}] Resultado ${functionName}:`, functionResult);
                 toolMessages.push({ tool_call_id: toolCall.id, role: 'tool', name: functionName, content: functionResult });
 
                 // Salir del bucle si generate_pdf completó la sesión
-                 if (toolRanAndCompletedSession) {
-                     break;
-                 }
+                if (toolRanAndCompletedSession) {
+                    break;
+                }
             } // Fin for toolCall
 
             currentHistory.push(...toolMessages); // Añadir resultados de tools
@@ -331,23 +341,23 @@ exports.postChatMessage = async (req, res) => {
                 console.log(`[Session ${sessionId}] Folio generado. Respuesta final directa añadida al historial.`);
 
             } else if (session.status === 'active') { // Si no se completó y sigue activa
-                 // Hacer la segunda llamada para obtener respuesta natural post-update
-                 console.log(`[Session ${sessionId}] Enviando a IA (2da llamada) para respuesta natural...`);
-                 const secondAssistantResponse = await getNextAssistantResponse({
-                     extractedData: session.extractedData,
-                     whatsappConversation: session.whatsappConversation,
-                     chatHistory: currentHistory // Historial ya incluye resultados 'tool'
-                 }, null); // Sin userMessage
+                // Hacer la segunda llamada para obtener respuesta natural post-update
+                console.log(`[Session ${sessionId}] Enviando a IA (2da llamada) para respuesta natural...`);
+                const secondAssistantResponse = await getNextAssistantResponse({
+                    extractedData: session.extractedData,
+                    whatsappConversation: session.whatsappConversation,
+                    chatHistory: currentHistory // Historial ya incluye resultados 'tool'
+                }, null); // Sin userMessage
 
-                 currentHistory.push(secondAssistantResponse); // Añadir al historial
-                 console.log(`[Session ${sessionId}] Respuesta IA (2da llamada - final):`, JSON.stringify(secondAssistantResponse, null, 2));
-                 finalNaturalResponse = secondAssistantResponse; // Esta es la que se envía al usuario
+                currentHistory.push(secondAssistantResponse); // Añadir al historial
+                console.log(`[Session ${sessionId}] Respuesta IA (2da llamada - final):`, JSON.stringify(secondAssistantResponse, null, 2));
+                finalNaturalResponse = secondAssistantResponse; // Esta es la que se envía al usuario
             } else {
-                 // Caso de error en generate_pdf o cambio de estado inesperado
-                 const errorMsg = toolMessages.find(m => m.name === 'generate_folio_pdf')?.content || "El proceso terminó con un estado inesperado.";
-                 finalNaturalResponse = { role: 'assistant', content: errorMsg };
-                 currentHistory.push(finalNaturalResponse);
-                 console.warn(`[Session ${sessionId}] Estado cambió a ${session.status} por error. Añadiendo mensaje de error como respuesta final.`);
+                // Caso de error en generate_pdf o cambio de estado inesperado
+                const errorMsg = toolMessages.find(m => m.name === 'generate_folio_pdf')?.content || "El proceso terminó con un estado inesperado.";
+                finalNaturalResponse = { role: 'assistant', content: errorMsg };
+                currentHistory.push(finalNaturalResponse);
+                console.warn(`[Session ${sessionId}] Estado cambió a ${session.status} por error. Añadiendo mensaje de error como respuesta final.`);
             }
 
         } else {
@@ -357,29 +367,29 @@ exports.postChatMessage = async (req, res) => {
 
         // ***** Verificación de Consistencia Final *****
         // El último mensaje DEBE ser 'assistant' y NO tener 'tool_calls'
-         const lastMessageToSave = currentHistory[currentHistory.length - 1];
-         if (!lastMessageToSave || lastMessageToSave.role !== 'assistant' || (lastMessageToSave.tool_calls && lastMessageToSave.tool_calls.length > 0)) {
-             console.error(`[Session ${sessionId}] ¡ERROR DE CONSISTENCIA FINAL! Último mensaje inválido.`, lastMessageToSave);
-             // Intentar añadir un mensaje genérico si el último es 'tool' y no hubo error mayor
-             if(lastMessageToSave && lastMessageToSave.role === 'tool' && !lastMessageToSave.content.toLowerCase().startsWith('error')) {
-                console.warn(`[Session ${sessionId}] Intentando corregir consistencia añadiendo mensaje final genérico.`);
-                finalNaturalResponse = { role: 'assistant', content: "Acción procesada." }; // Mensaje genérico post-tool
-                currentHistory.push(finalNaturalResponse);
-                // Volver a verificar por si acaso, aunque debería estar bien ahora
-                const correctedLastMessage = currentHistory[currentHistory.length - 1];
-                if (!correctedLastMessage || correctedLastMessage.role !== 'assistant' || (correctedLastMessage.tool_calls && correctedLastMessage.tool_calls.length > 0)) {
-                    await t.rollback();
-                    return res.status(500).json({ message: 'Error interno crítico: No se pudo corregir el estado final del historial.' });
-                }
-                 console.log(`[Session ${sessionId}] Consistencia corregida.`);
-             } else {
-                 // Si el problema es otro (ej. último mensaje 'user' o 'tool' con error), lanzar error
-                 await t.rollback();
-                 return res.status(500).json({ message: `Error interno crítico: El estado final del historial es inválido (${lastMessageToSave?.role}).` });
-             }
-         } else {
-             console.log(`[Session ${sessionId}] Verificación final OK.`);
-         }
+        const lastMessageToSave = currentHistory[currentHistory.length - 1];
+        if (!lastMessageToSave || lastMessageToSave.role !== 'assistant' || (lastMessageToSave.tool_calls && lastMessageToSave.tool_calls.length > 0)) {
+            console.error(`[Session ${sessionId}] ¡ERROR DE CONSISTENCIA FINAL! Último mensaje inválido.`, lastMessageToSave);
+            // Intentar añadir un mensaje genérico si el último es 'tool' y no hubo error mayor
+            if (lastMessageToSave && lastMessageToSave.role === 'tool' && !lastMessageToSave.content.toLowerCase().startsWith('error')) {
+                console.warn(`[Session ${sessionId}] Intentando corregir consistencia añadiendo mensaje final genérico.`);
+                finalNaturalResponse = { role: 'assistant', content: "Acción procesada." }; // Mensaje genérico post-tool
+                currentHistory.push(finalNaturalResponse);
+                // Volver a verificar por si acaso, aunque debería estar bien ahora
+                const correctedLastMessage = currentHistory[currentHistory.length - 1];
+                if (!correctedLastMessage || correctedLastMessage.role !== 'assistant' || (correctedLastMessage.tool_calls && correctedLastMessage.tool_calls.length > 0)) {
+                    await t.rollback();
+                    return res.status(500).json({ message: 'Error interno crítico: No se pudo corregir el estado final del historial.' });
+                }
+                console.log(`[Session ${sessionId}] Consistencia corregida.`);
+            } else {
+                // Si el problema es otro (ej. último mensaje 'user' o 'tool' con error), lanzar error
+                await t.rollback();
+                return res.status(500).json({ message: `Error interno crítico: El estado final del historial es inválido (${lastMessageToSave?.role}).` });
+            }
+        } else {
+            console.log(`[Session ${sessionId}] Verificación final OK.`);
+        }
         // ***** Fin Verificación *****
 
         // Guardar historial y estado actualizados
@@ -416,10 +426,10 @@ exports.postChatMessage = async (req, res) => {
 exports.discardSession = async (req, res) => {
     const sessionId = req.params.id;
     console.log(`🤖 Solicitud para descartar sesión de IA #${sessionId}`);
-  
+
     try {
         const session = await AISession.findByPk(sessionId);
-    
+
         if (!session) {
             console.warn(`Sesión #${sessionId} no encontrada al intentar descartar.`);
             return res.status(404).json({ message: 'Sesión no encontrada.' });
@@ -432,9 +442,9 @@ exports.discardSession = async (req, res) => {
         }
 
         // Cambiar el estado a 'cancelled'
-        session.status = 'cancelled'; 
+        session.status = 'cancelled';
         await session.save();
-        
+
         console.log(`✅ Sesión de IA #${sessionId} marcada como 'cancelled'.`);
         res.status(200).json({ message: 'Sesión descartada exitosamente.' });
 

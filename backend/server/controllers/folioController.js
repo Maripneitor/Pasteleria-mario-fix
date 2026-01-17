@@ -8,23 +8,37 @@ const { Op } = require('sequelize');
 const pdfService = require('../services/pdfService');
 
 
-const calculateFillingCost = (folioType, persons, fillings, tiers) => {
-    let cost = 0;
-    if (folioType === 'Normal') {
-        const numPersons = parseInt(persons, 10) || 0;
-        // Asegurarse que fillings sea un array de objetos { name, hasCost }
-        const validFillings = Array.isArray(fillings) ? fillings : [];
-        cost = validFillings.reduce((sum, filling) => {
-            // Usar Math.ceil para redondear hacia arriba por cada 20 personas o fracción
-            return (filling && filling.hasCost && numPersons > 0) ? sum + (Math.ceil(numPersons / 20) * 30) : sum;
-        }, 0);
-    } else if (folioType === 'Base/Especial') {
-        // Costo de relleno para Base/Especial podría necesitar lógica diferente si aplica.
-        // Por ahora, asumimos que no tienen costo extra o se incluye en el 'total' base.
-        // Si necesitaras calcularlo basado en tiers, tendrías que implementar esa lógica aquí.
-        cost = 0;
+const folioService = require('../services/folioService');
+// (Eliminada función calculateFillingCost - Lógica movida al servicio)
+
+// --- CALCULAR TOTALES (Endpoint auxiliar para frontend) ---
+exports.calculateTotals = async (req, res) => {
+    try {
+        const { persons, folioType, filling, total, additional, deliveryCost, addCommissionToCustomer, advancePayment, isPaid } = req.body;
+
+        // Validar/Normalizar datos mínimos necesarios
+        const fillingData = Array.isArray(filling)
+            ? filling.map(f => (typeof f === 'string' ? { name: f, hasCost: false } : f))
+            : [];
+        const additionalData = Array.isArray(additional) ? additional : [];
+
+        const result = await folioService.calculateFolioTotals({
+            persons: parseInt(persons) || 0,
+            folioType: folioType || 'Normal',
+            fillings: fillingData,
+            basePrice: parseFloat(total) || 0,
+            additionalItems: additionalData,
+            deliveryCost: parseFloat(deliveryCost) || 0,
+            applyCommission: addCommissionToCustomer === 'true' || addCommissionToCustomer === true,
+            advancePayment: parseFloat(advancePayment) || 0,
+            isPaid: isPaid
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Error al calcular totales:", error);
+        res.status(500).json({ message: 'Error al calcular totales', error: error.message });
     }
-    return cost;
 };
 
 // --- CREAR un nuevo folio ---
@@ -89,42 +103,27 @@ exports.createFolio = async (req, res) => {
         const complementsData = JSON.parse(complements || '[]');
         const cakeFlavorData = JSON.parse(cakeFlavor || '[]');
 
-        // Calcular costo de relleno usando la función corregida
-        const fillingCost = calculateFillingCost(folioData.folioType, folioData.persons, fillingData, tiersData);
+        // Calcular Totales usando FolioService (SIN MATEMÁTICAS AQUÍ)
+        const calculationResult = await folioService.calculateFolioTotals({
+            persons: folioData.persons,
+            folioType: folioData.folioType,
+            fillings: fillingData,
+            basePrice: total, // El 'total' del body es el precio base
+            additionalItems: additionalData,
+            deliveryCost: folioData.deliveryCost,
+            applyCommission: addCommissionToCustomer === 'true' || addCommissionToCustomer === true,
+            advancePayment: advancePayment,
+            isPaid: isPaid
+        });
 
-        // Calcular costos adicionales (suma de precios en additionalData)
-        const additionalCost = additionalData.reduce((sum, item) => sum + parseFloat(item.price || 0), 0);
-
-        // Calcular total y comisión
-        const applyCommission = addCommissionToCustomer === 'true' || addCommissionToCustomer === true;
-        const baseCakeCost = parseFloat(total) || 0; // El 'total' que viene del body es el COSTO BASE del pastel
-        const deliveryCostValue = parseFloat(folioData.deliveryCost || 0);
-
-        const baseTotalBeforeCommission = baseCakeCost + deliveryCostValue + additionalCost + fillingCost;
-
-        const commissionAmount = baseTotalBeforeCommission * 0.05; // Comisión exacta
-        let roundedCommissionAmount = 0;
-        let finalTotal = baseTotalBeforeCommission;
-
-        if (applyCommission) {
-            roundedCommissionAmount = Math.ceil(commissionAmount / 10) * 10; // Redondeo hacia arriba a la decena
-            finalTotal += roundedCommissionAmount; // Sumar comisión redondeada al total final
-        }
-
-        // --- INICIO DE LA CORRECCIÓN isPaid vs balance ---
-        let finalAdvancePayment = parseFloat(advancePayment) || 0;
-        const isActuallyPaid = isPaid === 'true' || isPaid === true; // Convertir a booleano
-
-        // Si está marcado como pagado, forzar el anticipo para que cubra el total
-        if (isActuallyPaid) {
-            finalAdvancePayment = finalTotal;
-        }
-
-        // Ahora calcula el balance con el finalAdvancePayment posiblemente ajustado
-        const balance = finalTotal - finalAdvancePayment;
-        // Determina el estado final de isPaid basado en el balance calculado
-        const finalIsPaidStatus = balance <= 0;
-        // --- FIN DE LA CORRECCIÓN isPaid vs balance ---
+        const {
+            total: finalTotal,
+            advancePayment: finalAdvancePayment,
+            balance,
+            commission: roundedCommissionAmount,
+            rawCommission: commissionAmount,
+            isPaid: finalIsPaidStatus
+        } = calculationResult;
 
         // Manejar imágenes
         const newImageUrls = req.files ? req.files.map(file => file.path.replace(/\\/g, '/')) : []; // Normalizar slashes
@@ -172,8 +171,8 @@ exports.createFolio = async (req, res) => {
             folioId: newFolio.id,
             folioNumber: newFolio.folioNumber,
             amount: commissionAmount.toFixed(2),
-            appliedToCustomer: applyCommission,
-            roundedAmount: applyCommission ? roundedCommissionAmount.toFixed(2) : null
+            appliedToCustomer: calculationResult.applyCommission || (addCommissionToCustomer === 'true' || addCommissionToCustomer === true),
+            roundedAmount: (addCommissionToCustomer === 'true' || addCommissionToCustomer === true) ? roundedCommissionAmount.toFixed(2) : null
         }, { transaction: t });
 
         await t.commit();
@@ -321,38 +320,32 @@ exports.updateFolio = async (req, res) => {
         const complementsData = JSON.parse(complements || '[]');
         const cakeFlavorData = JSON.parse(cakeFlavor || '[]');
 
-        // Recalcular costos
-        const currentFolioType = folioData.folioType || folio.folioType; // Usar nuevo tipo si se envía, si no el actual
+        // Recalcular costos usando FolioService
+        const currentFolioType = folioData.folioType || folio.folioType;
         const currentPersons = folioData.persons || folio.persons;
-        const fillingCost = calculateFillingCost(currentFolioType, currentPersons, fillingData, tiersData);
-        const additionalCost = additionalData.reduce((sum, item) => sum + parseFloat(item.price || 0), 0);
+
+        const calculationResult = await folioService.calculateFolioTotals({
+            persons: currentPersons,
+            folioType: currentFolioType,
+            fillings: fillingData,
+            basePrice: total, // basePrice
+            additionalItems: additionalData,
+            deliveryCost: folioData.deliveryCost || folio.deliveryCost,
+            applyCommission: addCommissionToCustomer === 'true' || addCommissionToCustomer === true,
+            advancePayment: advancePayment,
+            isPaid: isPaid
+        });
+
+        const {
+            total: finalTotal,
+            advancePayment: finalAdvancePayment,
+            balance,
+            commission: roundedCommissionAmount,
+            rawCommission: commissionAmount,
+            isPaid: finalIsPaidStatus
+        } = calculationResult;
+
         const applyCommission = addCommissionToCustomer === 'true' || addCommissionToCustomer === true;
-        const baseCakeCost = parseFloat(total) || 0;
-        const deliveryCostValue = parseFloat(folioData.deliveryCost || folio.deliveryCost || 0); // Usar nuevo, luego actual, luego 0
-
-        const baseTotalBeforeCommission = baseCakeCost + deliveryCostValue + additionalCost + fillingCost;
-        const commissionAmount = baseTotalBeforeCommission * 0.05;
-        let roundedCommissionAmount = 0;
-        let finalTotal = baseTotalBeforeCommission;
-        if (applyCommission) {
-            roundedCommissionAmount = Math.ceil(commissionAmount / 10) * 10;
-            finalTotal += roundedCommissionAmount;
-        }
-
-        // --- INICIO DE LA CORRECCIÓN isPaid vs balance ---
-        let finalAdvancePayment = parseFloat(advancePayment) || 0;
-        const isActuallyPaid = isPaid === 'true' || isPaid === true; // Convertir a booleano
-
-        // Si está marcado como pagado, forzar el anticipo para que cubra el total
-        if (isActuallyPaid) {
-            finalAdvancePayment = finalTotal;
-        }
-
-        // Ahora calcula el balance con el finalAdvancePayment posiblemente ajustado
-        const balance = finalTotal - finalAdvancePayment;
-        // Determina el estado final de isPaid basado en el balance calculado
-        const finalIsPaidStatus = balance <= 0;
-        // --- FIN DE LA CORRECCIÓN isPaid vs balance ---
 
 
         // Manejar imágenes
@@ -504,35 +497,13 @@ exports.generateFolioPdf = async (req, res) => {
             return res.status(400).json({ message: 'No se puede generar PDF para un folio pendiente. Confírmalo primero.' });
         }
 
-        // Generación de Ruta de Archivo (asegurar que deliveryDate sea válida)
-        let filePath;
-        let fileName = `Folio-${folio.folioNumber}.pdf`; // Nombre base
+        // NOTA: Con la integración de Cloud Storage, ya no necesitamos calcular rutas locales,
+        // pero validamos la fecha por integridad de datos.
         try {
             const deliveryDate = parseISO(folio.deliveryDate);
             if (isNaN(deliveryDate)) throw new Error('Fecha de entrega inválida');
-
-            const month = format(deliveryDate, 'MMMM', { locale: es });
-            const weekOptions = { weekStartsOn: 1 };
-            const startOfWeekDate = startOfWeek(deliveryDate, weekOptions);
-            const endOfWeekDate = endOfWeek(deliveryDate, weekOptions);
-            let weekStartDay = getDate(startOfWeekDate);
-            let weekEndDay = getDate(endOfWeekDate);
-            if (getMonth(startOfWeekDate) !== getMonth(deliveryDate)) { weekStartDay = 1; }
-            if (getMonth(endOfWeekDate) !== getMonth(deliveryDate)) { weekEndDay = getDate(lastDayOfMonth(deliveryDate)); }
-            const weekFolder = `Semana ${weekStartDay}-${weekEndDay}`;
-            const dayName = format(deliveryDate, 'EEEE dd', { locale: es });
-            const dayFolder = `${dayName} de ${month}`;
-            const directoryPath = path.resolve(__dirname, '..', '..', 'FOLIOS_GENERADOS', month, weekFolder, dayFolder);
-
-            await fs.mkdir(directoryPath, { recursive: true });
-            filePath = path.join(directoryPath, fileName);
         } catch (dateError) {
-            console.error(`Error procesando fecha o creando directorios para folio ${folio.folioNumber}:`, dateError);
-            // Considerar guardar en una carpeta por defecto o devolver error
-            const fallbackDir = path.resolve(__dirname, '..', '..', 'FOLIOS_GENERADOS', '_ERRORES');
-            await fs.mkdir(fallbackDir, { recursive: true });
-            filePath = path.join(fallbackDir, fileName);
-            console.warn(`Guardando PDF en directorio de errores: ${filePath}`);
+            console.warn(`Advertencia de fecha para folio ${folio.folioNumber}:`, dateError);
         }
 
 
@@ -633,14 +604,12 @@ exports.generateFolioPdf = async (req, res) => {
             console.log('ℹ️ [PDF DEBUG] El folio no tiene imágenes para el PDF.');
         }
 
-        // Generación y Envío del PDF
-        const pdfBuffer = await pdfService.createPdf(folioDataForPdf);
-        await fs.writeFile(filePath, pdfBuffer);
-        console.log(`✅ PDF guardado en: ${filePath}`);
+        // Generación y Envío del PDF (vía URL)
+        const pdfUrl = await pdfService.createPdf(folioDataForPdf);
+        console.log(`✅ PDF generado y disponible en: ${pdfUrl}`);
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
-        res.send(pdfBuffer);
+        // Devolver la URL al cliente
+        res.status(200).json({ url: pdfUrl });
 
     } catch (error) {
         console.error(`❌ Error al generar PDF para folio ${req.params.id}:`, error);
@@ -688,9 +657,9 @@ exports.generateDaySummaryPdf = async (req, res) => {
             include: [{ model: Client, as: 'client', required: false }],
             order: [['deliveryTime', 'ASC']]
         });
-        if (foliosDelDia.length === 0) return res.status(404).send(`<html><body><h1>No hay folios activos para ${date}.</h1></body></html>`);
+        if (foliosDelDia.length === 0) return res.status(404).json({ message: `No hay folios activos para ${date}.` });
 
-        let pdfBuffer;
+        let pdfUrl;
         let pdfData = [];
         if (type === 'labels') {
             foliosDelDia.forEach(folio => {
@@ -739,18 +708,16 @@ exports.generateDaySummaryPdf = async (req, res) => {
                 // ===== FIN DE LA CORRECCIÓN =====
 
             });
-            if (pdfData.length === 0) return res.status(404).send(`<html><body><h1>No se generaron etiquetas para ${date}.</h1></body></html>`);
-            pdfBuffer = await pdfService.createLabelsPdf(pdfData);
+            if (pdfData.length === 0) return res.status(404).json({ message: `No se generaron etiquetas para ${date}.` });
+            pdfUrl = await pdfService.createLabelsPdf(pdfData);
         } else { // type === 'orders'
             pdfData = foliosDelDia.filter(f => f.deliveryLocation && !f.deliveryLocation.toLowerCase().includes('recoge en tienda'));
-            if (pdfData.length === 0) return res.status(404).send(`<html><body><h1>No hay comandas de envío para ${date}.</h1></body></html>`);
-            pdfBuffer = await pdfService.createOrdersPdf(pdfData);
+            if (pdfData.length === 0) return res.status(404).json({ message: `No hay comandas de envío para ${date}.` });
+            pdfUrl = await pdfService.createOrdersPdf(pdfData);
         }
 
-        const fileName = `Resumen_${type}_${date}.pdf`;
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
-        res.send(pdfBuffer);
+        res.status(200).json({ url: pdfUrl });
+
     } catch (error) {
         console.error(`Error PDF masivo (${type}) ${date}:`, error);
         res.status(500).json({ message: 'Error al generar PDF masivo', error: error.message });
@@ -813,11 +780,9 @@ exports.generateLabelPdf = async (req, res) => {
 
         if (labelsToPrint.length === 0) return res.status(404).send(`<html><body><h1>No se generaron etiquetas para folio ${folio.folioNumber}.</h1></body></html>`);
 
-        const pdfBuffer = await pdfService.createLabelsPdf(labelsToPrint);
-        const fileName = `Etiqueta_Folio-${folio.folioNumber}.pdf`;
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
-        res.send(pdfBuffer);
+        const pdfUrl = await pdfService.createLabelsPdf(labelsToPrint);
+        console.log(`✅ PDF de etiqueta generado: ${pdfUrl}`);
+        res.status(200).json({ url: pdfUrl });
 
     } catch (error) {
         console.error(`Error PDF etiqueta ${req.params.id}:`, error);
@@ -914,11 +879,9 @@ exports.generateCommissionReport = async (req, res) => {
             where: { createdAt: { [Op.gte]: `${date} 00:00:00`, [Op.lte]: `${date} 23:59:59` } },
             attributes: ['folioNumber', 'amount'], order: [['createdAt', 'ASC']]
         });
-        const pdfBuffer = await pdfService.createCommissionReportPdf(commissions, date);
-        const fileName = `Reporte_Comisiones_${date}.pdf`;
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
-        res.send(pdfBuffer);
+        const pdfUrl = await pdfService.createCommissionReportPdf(commissions, date);
+        console.log(`✅ PDF de reporte generado: ${pdfUrl}`);
+        res.status(200).json({ url: pdfUrl });
     } catch (error) {
         console.error(`Error reporte comisiones ${req.query.date}:`, error);
         res.status(500).json({ message: 'Error al generar reporte', error: error.message });

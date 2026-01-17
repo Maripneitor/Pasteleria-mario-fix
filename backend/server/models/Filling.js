@@ -16,6 +16,11 @@ const Filling = sequelize.define('Filling', {
         defaultValue: false,
         comment: 'True si el relleno tiene costo extra'
     },
+    price: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00,
+        comment: 'Costo por cada 20 personas'
+    },
     suboptions: {
         type: DataTypes.JSON,
         defaultValue: [],

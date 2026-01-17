@@ -24,8 +24,8 @@ const uploadReference = multer({ storage: storage });
 // --- NUEVO: Configuración de Multer para imagen de inspiración (en memoria) ---
 const memoryStorage = multer.memoryStorage();
 const uploadInspiration = multer({
-    storage: memoryStorage,
-    limits: { fileSize: 10 * 1024 * 1024 } // Límite de 10MB
+  storage: memoryStorage,
+  limits: { fileSize: 10 * 1024 * 1024 } // Límite de 10MB
 });
 
 // Aplicamos el middleware de autenticación a todas las rutas de folios
@@ -45,33 +45,33 @@ router.get('/commission-report', authorize('Administrador'), folioController.gen
 
 // --- NUEVA RUTA PARA VALIDACIÓN Y SUGERENCIAS IA ---
 router.post('/validate-suggest', async (req, res) => {
-    try {
-        const currentFolioData = req.body;
-        if (!currentFolioData || typeof currentFolioData !== 'object') {
-            return res.status(400).json({ message: 'No se recibieron datos del folio.' });
-        }
-        const results = await aiValidationService.validateAndSuggest(currentFolioData);
-        res.status(200).json(results);
-    } catch (error) {
-        console.error("Error en endpoint /validate-suggest:", error);
-        res.status(500).json({ message: 'Error al procesar validación/sugerencia', error: error.message });
+  try {
+    const currentFolioData = req.body;
+    if (!currentFolioData || typeof currentFolioData !== 'object') {
+      return res.status(400).json({ message: 'No se recibieron datos del folio.' });
     }
+    const results = await aiValidationService.validateAndSuggest(currentFolioData);
+    res.status(200).json(results);
+  } catch (error) {
+    console.error("Error en endpoint /validate-suggest:", error);
+    res.status(500).json({ message: 'Error al procesar validación/sugerencia', error: error.message });
+  }
 });
 
 // --- NUEVA RUTA PARA ANÁLISIS DE IMAGEN DE INSPIRACIÓN IA ---
 router.post('/analyze-image', uploadInspiration.single('inspirationImage'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'No se recibió ninguna imagen.' });
-    }
-    try {
-        const mimeType = req.file.mimetype;
-        const base64Image = `data:${mimeType};base64,${req.file.buffer.toString('base64')}`;
-        const analysisResult = await aiImageAnalysisService.analyzeInspirationImage(base64Image);
-        res.status(200).json(analysisResult);
-    } catch (error) {
-        console.error("Error en endpoint /analyze-image:", error);
-        res.status(500).json({ message: 'Error al analizar la imagen', error: error.message });
-    }
+  if (!req.file) {
+    return res.status(400).json({ message: 'No se recibió ninguna imagen.' });
+  }
+  try {
+    const mimeType = req.file.mimetype;
+    const base64Image = `data:${mimeType};base64,${req.file.buffer.toString('base64')}`;
+    const analysisResult = await aiImageAnalysisService.analyzeInspirationImage(base64Image);
+    res.status(200).json(analysisResult);
+  } catch (error) {
+    console.error("Error en endpoint /analyze-image:", error);
+    res.status(500).json({ message: 'Error al analizar la imagen', error: error.message });
+  }
 });
 
 // Rutas para la colección de folios (/api/folios)
@@ -79,6 +79,9 @@ router.route('/')
   .get(folioController.getAllFolios)
   // Usa 'uploadReference' para las imágenes de referencia
   .post(uploadReference.array('referenceImages', 5), folioController.createFolio);
+
+// Ruta para cálculo de precios (sin guardar)
+router.post('/calculate', folioController.calculateTotals);
 
 // Rutas para un folio específico (/api/folios/:id)
 router.route('/:id')

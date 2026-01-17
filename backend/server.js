@@ -34,17 +34,19 @@ conectarDB();
 
 // --- MIDDLEWARES ---
 app.use(cors({
-  origin: '*',
+  origin: ['http://localhost:5173', 'http://localhost:3000'], // Permitir Vite y local
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.use(express.json());
 
-// Servir archivos estáticos de la carpeta 'uploads' de forma pública
-// Esto es necesario para que el PDF y el frontend puedan encontrar las imágenes
+// Servir archivos estáticos de la carpeta 'uploads' (Imágenes, etc)
+// Mantenemos esto para que el frontend pueda acceder a recursos subidos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use(express.static(__dirname));
+// ALERTA: Se ha eliminado el serving de archivos estáticos del root (antiguo frontend)
+// app.use(express.static(__dirname));
 
 // --- RUTAS DE LA API ---
 app.get('/', (req, res) => {
@@ -63,7 +65,7 @@ app.use('/api/dictation', dictationRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 
 // --- INICIO DEL SERVIDOR ---
-sequelize.sync({ force: false }).then(async () => {
+sequelize.sync({ alter: true }).then(async () => {
   console.log('🔄 Modelos sincronizados con la base de datos.');
   await ingredientController.seedIngredients();
   app.listen(PORT, () => {
