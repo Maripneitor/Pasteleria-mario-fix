@@ -8,7 +8,7 @@ const Folio = sequelize.define('Folio', {
     unique: true
   },
   folioType: {
-    type: DataTypes.ENUM('Normal', 'Base/Especial'),
+    type: DataTypes.STRING, // Se cambia temporalmente a STRING para evitar error de truncado por datos incompatibles
     allowNull: false
   },
   deliveryDate: {
@@ -29,7 +29,7 @@ const Folio = sequelize.define('Folio', {
   },
   cakeFlavor: {
     type: DataTypes.JSON,
-    allowNull: true 
+    allowNull: true
   },
   filling: {
     type: DataTypes.JSON,
@@ -93,8 +93,8 @@ const Folio = sequelize.define('Folio', {
     allowNull: true
   },
   complements: {
-      type: DataTypes.JSON,
-      allowNull: true
+    type: DataTypes.JSON,
+    allowNull: true
   },
   isPaid: {
     type: DataTypes.BOOLEAN,
@@ -102,24 +102,24 @@ const Folio = sequelize.define('Folio', {
     defaultValue: false
   },
   hasExtraHeight: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false, 
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   isPrinted: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   fondantChecked: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   dataChecked: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, { tableName: 'folios' });
 

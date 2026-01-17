@@ -65,7 +65,7 @@ app.use('/api/dictation', dictationRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 
 // --- INICIO DEL SERVIDOR ---
-sequelize.sync({ alter: true }).then(async () => {
+sequelize.sync({ alter: false }).then(async () => {
   console.log('🔄 Modelos sincronizados con la base de datos.');
   await ingredientController.seedIngredients();
   app.listen(PORT, () => {

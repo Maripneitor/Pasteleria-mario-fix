@@ -2,14 +2,50 @@ const puppeteer = require('puppeteer');
 const ejs = require('ejs');
 const path = require('path');
 const { Storage } = require('@google-cloud/storage');
-const pLimit = require('p-limit');
 
 // --- CONFIGURACIÓN ---
 const storage = new Storage(); // Busca credenciales en GOOGLE_APPLICATION_CREDENTIALS
 const bucketName = process.env.GCS_BUCKET_NAME || 'pasteleria-folios-bucket'; // Nombre del bucket en .env
 
-// Limite de concurrencia: Máximo 2 procesos de PDF simultáneos
-const limit = pLimit(2);
+// --- CONTROL DE CONCURRENCIA NATIVO ---
+/**
+ * Clase simple para limitar la ejecución paralela de promesas (Semaforo).
+ * Reemplaza a p-limit para evitar problemas de compatibilidad (ESM vs CJS).
+ */
+class ConcurrencyLimiter {
+    constructor(maxConcurrent) {
+        this.maxConcurrent = maxConcurrent;
+        this.currentRunning = 0;
+        this.queue = [];
+    }
+
+    /**
+     * Ejecuta una función asíncrona respetando el límite de concurrencia.
+     * @param {Function} fn - Función asíncrona a ejecutar.
+     * @returns {Promise<any>} - El resultado de la función.
+     */
+    async run(fn) {
+        if (this.currentRunning >= this.maxConcurrent) {
+            // Si ya hay el máximo corriendo, esperar en la cola
+            await new Promise(resolve => this.queue.push(resolve));
+        }
+
+        this.currentRunning++;
+        try {
+            return await fn();
+        } finally {
+            this.currentRunning--;
+            if (this.queue.length > 0) {
+                // Liberar al siguiente en la cola
+                const next = this.queue.shift();
+                next();
+            }
+        }
+    }
+}
+
+// Límite de concurrencia: Máximo 2 procesos de PDF simultáneos
+const limiter = new ConcurrencyLimiter(2);
 
 /**
  * Sube un buffer a Google Cloud Storage y retorna la URL pública.
@@ -24,17 +60,9 @@ async function uploadToStorage(buffer, fileName) {
 
         await file.save(buffer, {
             contentType: 'application/pdf',
-            resumable: false,
-            // Configurar para que sea público si el bucket no es uniforme
-            // Nota: Es mejor configurar el bucket para acceso público o usar URLs firmadas.
-            // Aquí asumiremos que podemos hacerlo público o generar una URL firmada.
-            // Opción A: Hacer público
-            // validation: 'false'
+            resumable: false
+            // Configurar para que sea público si es necesario, o usar URL firmada.
         });
-
-        // Alternativa: Si el bucket es público por defecto, solo construimos la URL.
-        // O hacemos el archivo público explícitamente:
-        // await file.makePublic(); 
 
         // Retornar la URL pública directa (asumiendo bucket público)
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
@@ -89,13 +117,38 @@ async function generatePdfBuffer(html, options = {}) {
 
 // --- SERVICIOS EXPORTADOS ---
 
+// Función auxiliar para lógica repetida de generación masiva
+async function generateBulkPdf(templateName, data, date = null, fileNamePrefix = 'Doc') {
+    return limiter.run(async () => {
+        try {
+            const templatePath = path.join(__dirname, `../templates/${templateName}.ejs`);
+            // Pasamos 'folios' y 'commissions' para cubrir ambos casos de uso en templates existentes
+            const html = await ejs.renderFile(templatePath, { folios: data, date: date, commissions: data });
+
+            const options = {
+                margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+            };
+
+            const pdfBuffer = await generatePdfBuffer(html, options);
+
+            const fileName = `${fileNamePrefix}-${date || Date.now()}.pdf`;
+            const publicUrl = await uploadToStorage(pdfBuffer, fileName);
+
+            return publicUrl;
+        } catch (error) {
+            console.error(`❌ Error durante la creación del PDF de ${templateName}:`, error);
+            throw error;
+        }
+    });
+}
+
 /**
  * Crea un PDF de folio individual, lo sube a la nube y devuelve la URL.
  * @param {Object} folioData - Datos del folio.
  * @returns {Promise<string>} - URL del PDF generado.
  */
 exports.createPdf = async (folioData) => {
-    return limit(async () => {
+    return limiter.run(async () => {
         try {
             console.log('📄 [PDF SERVICE] Generando PDF para folio:', folioData.folioNumber);
             const templatePath = path.join(__dirname, '../templates/folioTemplate.ejs');
@@ -128,33 +181,6 @@ exports.createPdf = async (folioData) => {
     });
 };
 
-/**
- * Función genérica para crear PDFs masivos (etiquetas y comandas) y subirlos.
- */
-async function generateBulkPdf(templateName, data, date = null, fileNamePrefix = 'Doc') {
-    return limit(async () => {
-        try {
-            const templatePath = path.join(__dirname, `../templates/${templateName}.ejs`);
-            const html = await ejs.renderFile(templatePath, { folios: data, date: date, commissions: data });
-
-            const options = {
-                margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
-            };
-
-            const pdfBuffer = await generatePdfBuffer(html, options);
-
-            const fileName = `${fileNamePrefix}-${date || Date.now()}.pdf`;
-            const publicUrl = await uploadToStorage(pdfBuffer, fileName);
-
-            return publicUrl;
-
-        } catch (error) {
-            console.error(`❌ Error durante la creación del PDF de ${templateName}:`, error);
-            throw error;
-        }
-    });
-}
-
 exports.createLabelsPdf = async (folios) => {
     const dateStr = folios.length > 0 && folios[0].deliveryDate ? folios[0].deliveryDate : 'General';
     return generateBulkPdf('labelsTemplate', folios, dateStr, 'Etiquetas');
@@ -166,10 +192,15 @@ exports.createOrdersPdf = async (folios) => {
 };
 
 exports.createCommissionReportPdf = async (commissions, date) => {
-    try {
-        // Nota: Commission logic is slightly different in params, adapting logic here or using generateBulkPdf if compatible
-        // The original used generatePdf directly for commissions. Let's wrap it in limit too.
-        return limit(async () => {
+    // Reutilizamos generateBulkPdf ya que la lógica es idéntica (render template -> buffer -> upload)
+    // Solo aseguramos que el template espere 'commissions' (lo cual manejamos pasando data en ambas props en generateBulkPdf por seguridad, o mejor aún, personalizamos)
+
+    // Para ser más estrictos y evitar romper templates existentes que esperan variables específicas, 
+    // usaremos una implementación específica dentro del limiter si queremos ser 100% seguros,
+    // O mejor, invoco el limiter directamente aquí para máxima claridad como estaba antes.
+
+    return limiter.run(async () => {
+        try {
             const templatePath = path.join(__dirname, '../templates/commissionReportTemplate.ejs');
             const html = await ejs.renderFile(templatePath, { commissions, date });
 
@@ -179,9 +210,9 @@ exports.createCommissionReportPdf = async (commissions, date) => {
             const fileName = `ReporteComisiones-${date}.pdf`;
             const publicUrl = await uploadToStorage(pdfBuffer, fileName);
             return publicUrl;
-        });
-    } catch (error) {
-        console.error(`❌ Error durante la creación del PDF de comisiones:`, error);
-        throw error;
-    }
+        } catch (error) {
+            console.error(`❌ Error durante la creación del PDF de comisiones:`, error);
+            throw error;
+        }
+    });
 };
