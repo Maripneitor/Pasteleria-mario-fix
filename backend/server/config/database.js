@@ -19,6 +19,11 @@ const sequelize = new Sequelize(
 
 const conectarDB = async () => {
   try {
+    // Validar variables de entorno críticas
+    if (!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+      throw new Error('Faltan variables de entorno para la base de datos (DB_USER, DB_PASSWORD, DB_NAME)');
+    }
+
     // Verifica que la conexión con la base de datos se ha establecido correctamente.
     await sequelize.authenticate();
   } catch (error) {

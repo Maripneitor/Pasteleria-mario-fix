@@ -1,0 +1,79 @@
+import React from 'react';
+import styled from 'styled-components';
+import { Home, Search, ShoppingBag, LogOut } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const DesktopSidebar = ({ onLogout }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const isActive = (path) => location.pathname === path;
+
+    return (
+        <StyledWrapper>
+            <div className="sidebar-container hidden md:flex flex-col items-center py-8 bg-white border-r border-gray-100 h-full w-20 shadow-sm fixed top-0 left-0 z-50">
+                {/* Brand Logo - Simplified */}
+                <div className="mb-10 w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white font-bold shadow-red-200 shadow-lg">
+                    P
+                </div>
+
+                <div className="flex-1 flex flex-col gap-6 w-full items-center">
+                    <NavIcon
+                        Icon={Home}
+                        active={isActive('/dashboard')}
+                        onClick={() => navigate('/dashboard')}
+                        tooltip="Home"
+                    />
+                    <NavIcon
+                        Icon={ShoppingBag}
+                        active={isActive('/folios')}
+                        onClick={() => navigate('/folios')}
+                        tooltip="Pedidos"
+                    />
+                    <NavIcon
+                        Icon={Search}
+                        active={isActive('/calendario')}
+                        onClick={() => navigate('/calendario')}
+                        tooltip="Buscar"
+                    />
+                </div>
+
+                <div className="mt-auto">
+                    <NavIcon
+                        Icon={LogOut}
+                        active={false}
+                        onClick={onLogout}
+                        danger
+                        tooltip="Salir"
+                    />
+                </div>
+            </div>
+        </StyledWrapper>
+    );
+};
+
+const NavIcon = ({ Icon, active, onClick, danger, tooltip }) => (
+    <div className="group relative flex items-center justify-center">
+        <button
+            onClick={onClick}
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${active
+                    ? 'bg-red-50 text-red-500 shadow-inner'
+                    : danger
+                        ? 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                        : 'text-gray-400 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+        >
+            <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+        </button>
+        {/* Tooltip */}
+        <span className="absolute left-full ml-4 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+            {tooltip}
+        </span>
+    </div>
+);
+
+const StyledWrapper = styled.div`
+  /* Wrapper primarily for spacing/isolation if needed */
+`;
+
+export default DesktopSidebar;

@@ -56,9 +56,20 @@ exports.createFolio = async (req, res) => {
             ...folioData
         } = req.body;
 
-        // Validaciones básicas
-        if (!clientName || !clientPhone || !deliveryDate || total === undefined || total === null || advancePayment === undefined || advancePayment === null) {
-            throw new Error("Faltan campos obligatorios: nombre, teléfono, fecha, total o anticipo.");
+        // Validaciones estrictas
+        const requiredFields = ['clientName', 'clientPhone', 'deliveryDate', 'total', 'advancePayment'];
+        const missingFields = requiredFields.filter(field => !req.body[field] && req.body[field] !== 0);
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                message: "Faltan campos obligatorios.",
+                missing: missingFields
+            });
+        }
+
+        // Validar tipos de datos numéricos
+        if (isNaN(parseFloat(total)) || isNaN(parseFloat(advancePayment))) {
+            return res.status(400).json({ message: "El total y el anticipo deben ser valores numéricos." });
         }
 
 
@@ -178,7 +189,34 @@ exports.createFolio = async (req, res) => {
         await t.commit();
         console.log(`✅ Folio ${newFolio.folioNumber} creado exitosamente.`);
 
+        // --- MANEJO ASÍNCRONO ---
+        // Respondemos al cliente inmediatamente
         res.status(201).json(newFolio);
+
+        // Tareas en segundo plano (Fire & Forget pero con logs)
+        (async () => {
+            try {
+                const folioForPdf = await Folio.findByPk(newFolio.id, {
+                    include: [
+                        { model: Client, as: 'client' },
+                        { model: User, as: 'responsibleUser' }
+                    ]
+                });
+
+                // Generar PDF
+                const pdfUrl = await pdfService.createPdf(folioForPdf.toJSON());
+                console.log(`📄 PDF generado en segundo plano para folio ${newFolio.folioNumber}: ${pdfUrl}`);
+
+                // Enviar WhatsApp si aplica (asumiendo que existe un servicio)
+                // if (folioForPdf.client.phone) {
+                //    await whatsappService.sendFolioNotification(folioForPdf.client.phone, pdfUrl);
+                // }
+
+            } catch (bgError) {
+                console.error(`⚠️ Error en tarea de fondo para folio ${newFolio.folioNumber}:`, bgError.message);
+                // Aquí podrías guardar un log de error en BD o notificar a admin
+            }
+        })();
 
     } catch (error) {
         // Si la transacción sigue activa, hacer rollback
@@ -494,7 +532,9 @@ exports.generateFolioPdf = async (req, res) => {
         });
         if (!folio) { return res.status(404).json({ message: 'Folio no encontrado' }); }
         if (folio.status === 'Pendiente') {
-            return res.status(400).json({ message: 'No se puede generar PDF para un folio pendiente. Confírmalo primero.' });
+            return res.status(400).json({
+                message: 'El folio está en estado "Pendiente". Debes confirmarlo antes de generar el PDF.'
+            });
         }
 
         // NOTA: Con la integración de Cloud Storage, ya no necesitamos calcular rutas locales,

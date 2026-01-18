@@ -1,424 +1,477 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Save, Mic, Calculator, ArrowLeft, Plus, Trash, AlertCircle } from 'lucide-react';
-import api from '../services/api'; // Ensure this exists and is configured
-import DictationFeedback from './DictationFeedback';
+import React, { useMemo, useEffect, useState } from 'react';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { Save, ArrowLeft, Trash, Plus, Calculator, Mic, Sparkles } from 'lucide-react';
+import IngredientPicker from './IngredientPicker';
+import VoiceDictationModal from './VoiceDictationModal';
+import AiSidebar from './AiSidebar';
+import ImageAnalyzer from './ImageAnalyzer';
+import api from '../services/api';
 
-const FolioForm = ({ onCancel, onSuccess }) => {
-    // --- State ---
-    const [loading, setLoading] = useState(false);
-    const [calculating, setCalculating] = useState(false);
-    const [dictationStatus, setDictationStatus] = useState('idle'); // idle, listening, processing, success, error
+// --- Constants & Helpers ---
+const BLOCKED_FLAVORS = ['Mil Hojas', 'Pastel de Queso'];
+const TIER_DEFAULTS = { persons: 20, flavor: [], filling: [] };
 
-    // Catalogues
-    const [flavors, setFlavors] = useState([]);
-    const [fillings, setFillings] = useState([]);
+const FolioForm = ({ onCancel, onSuccess, initialData }) => {
+    // --- State for AI Features ---
+    const [isDictationOpen, setIsDictationOpen] = useState(false);
 
-    // Form Data
-    const [formData, setFormData] = useState({
-        clientName: '',
-        clientPhone: '',
-        clientPhone2: '',
-        deliveryDate: '',
-        deliveryTime: '',
-        folioType: 'Normal', // Normal, Base/Especial
-        persons: 20,
-        cakeFlavor: [], // Array of selected flavors
-        filling: [], // Array of selected fillings names
-        shape: 'Redondo',
-        designDescription: '',
-        dedication: '',
-        total: 0, // Base price
-        advancePayment: 0,
-        deliveryCost: 0,
-        addCommissionToCustomer: false,
-        additional: [], // [{ description: '', price: 0 }]
-        status: 'Nuevo'
-    });
-
-    // Calculated Totals
-    const [totals, setTotals] = useState({
-        subtotal: 0,
-        fillingCost: 0,
-        commission: 0,
-        total: 0,
-        anticipoMinimo: 0
-    });
-
-    // --- Effects ---
-
-    // Load catalogues
-    useEffect(() => {
-        const loadCatalogues = async () => {
-            try {
-                const [resFlavors, resFillings] = await Promise.all([
-                    api.get('/ingredients/flavors'),
-                    api.get('/ingredients/fillings')
-                ]);
-                setFlavors(resFlavors.data || []);
-                setFillings(resFillings.data || []);
-            } catch (error) {
-                console.error("Error loading catalogues", error);
-            }
-        };
-        loadCatalogues();
-    }, []);
-
-    // Debounced Calculation
-    useEffect(() => {
-        const calculate = async () => {
-            if (!formData.persons || !formData.total) return;
-
-            setCalculating(true);
-            try {
-                const res = await api.post('/folios/calculate', {
-                    persons: formData.persons,
-                    folioType: formData.folioType,
-                    filling: formData.filling,
-                    total: formData.total,
-                    additional: formData.additional,
-                    deliveryCost: formData.deliveryCost,
-                    addCommissionToCustomer: formData.addCommissionToCustomer,
-                    advancePayment: formData.advancePayment
-                });
-                setTotals(res.data);
-            } catch (error) {
-                console.error("Calculation error", error);
-            } finally {
-                setCalculating(false);
-            }
-        };
-
-        const timer = setTimeout(calculate, 500); // 500ms debounce
-        return () => clearTimeout(timer);
-    }, [
-        formData.persons,
-        formData.folioType,
-        formData.filling,
-        formData.total,
-        formData.additional,
-        formData.deliveryCost,
-        formData.addCommissionToCustomer,
-        formData.advancePayment
-    ]);
-
-    // --- Handlers ---
-
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    const handleArrayChange = (field, value) => {
-        setFormData(prev => {
-            const current = prev[field] || [];
-            if (current.includes(value)) {
-                return { ...prev, [field]: current.filter(item => item !== value) };
-            } else {
-                return { ...prev, [field]: [...current, value] };
-            }
-        });
-    };
-
-    const handleAddAdditional = () => {
-        setFormData(prev => ({
-            ...prev,
-            additional: [...prev.additional, { description: '', price: 0 }]
-        }));
-    };
-
-    const handleUpdateAdditional = (index, field, value) => {
-        const newAdditional = [...formData.additional];
-        newAdditional[index][field] = value;
-        setFormData(prev => ({ ...prev, additional: newAdditional }));
-    };
-
-    const handleRemoveAdditional = (index) => {
-        const newAdditional = formData.additional.filter((_, i) => i !== index);
-        setFormData(prev => ({ ...prev, additional: newAdditional }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await api.post('/folios', {
-                ...formData,
-                isPaid: formData.advancePayment >= totals.total // Simple logic, backend confirms
-            });
-            onSuccess();
-        } catch (error) {
-            console.error("Error creating folio", error);
-            alert("Error al crear el folio. Verifique los datos.");
-        } finally {
-            setLoading(false);
+    // --- React Hook Form Setup ---
+    const { register, control, handleSubmit, setValue, getValues, formState: { errors, isSubmitting } } = useForm({
+        defaultValues: initialData || {
+            clientName: '',
+            clientPhone: '',
+            deliveryDate: '',
+            deliveryTime: '12:00',
+            folioType: 'Normal', // 'Normal' or 'Base/Especial'
+            persons: 20,
+            cakeFlavor: [],
+            filling: [],
+            tiers: [], // For 'Base/Especial'
+            additional: [],
+            total: 0, // Base price input
+            deliveryCost: 0,
+            advancePayment: 0,
+            addCommissionToCustomer: false,
+            shape: 'Redondo',
+            designDescription: '',
+            originalDescription: '' // To store AI analysis backup
         }
+    });
+
+    const { fields: additionalFields, append: appendAdditional, remove: removeAdditional } = useFieldArray({
+        control,
+        name: 'additional'
+    });
+
+    const { fields: tierFields, append: appendTier, remove: removeTier } = useFieldArray({
+        control,
+        name: 'tiers'
+    });
+
+    // --- Watch Values for Calculations & Logic ---
+    const folioType = useWatch({ control, name: 'folioType' });
+    const watchedTotal = useWatch({ control, name: 'total' }) || 0;
+    const watchedAdditional = useWatch({ control, name: 'additional' }) || [];
+    const watchedDelivery = useWatch({ control, name: 'deliveryCost' }) || 0;
+    const watchedCommission = useWatch({ control, name: 'addCommissionToCustomer' });
+    const watchedAdvance = useWatch({ control, name: 'advancePayment' }) || 0;
+    const watchedFlavors = useWatch({ control, name: 'cakeFlavor' }) || [];
+    const watchedFillings = useWatch({ control, name: 'filling' }) || [];
+
+    // Watch all for AI Sidebar
+    const allValues = useWatch({ control });
+
+    // --- Business Logic 1: Blocking Fillings ---
+    const isFillingBlocked = useMemo(() => {
+        return watchedFlavors.some(f => BLOCKED_FLAVORS.includes(f));
+    }, [watchedFlavors]);
+
+    useEffect(() => {
+        if (isFillingBlocked && watchedFillings.length > 0) {
+            setValue('filling', []); // Clear fillings if blocked flavor selected
+        }
+    }, [isFillingBlocked, watchedFillings, setValue]);
+
+    // --- Business Logic 2: Real-time Calculations (useMemo) ---
+    const calculations = useMemo(() => {
+        const base = parseFloat(watchedTotal) || 0;
+        const extras = watchedAdditional.reduce((acc, item) => acc + (parseFloat(item.price) || 0), 0);
+        const delivery = parseFloat(watchedDelivery) || 0;
+
+        let subtotal = base + extras + delivery;
+
+        // Commission: 5% rounded to nearest 10 (decena)
+        let commission = 0;
+        if (watchedCommission) {
+            const rawCommission = subtotal * 0.05;
+            commission = Math.ceil(rawCommission / 10) * 10;
+        }
+
+        const grandTotal = subtotal + commission;
+        const minAdvance = Math.ceil((grandTotal * 0.5) / 10) * 10; // 50% also rounded for cleanliness, assuming user preference
+        const balance = Math.max(0, grandTotal - parseFloat(watchedAdvance));
+
+        return {
+            subtotal,
+            commission,
+            total: grandTotal,
+            minAdvance,
+            balance
+        };
+    }, [watchedTotal, watchedAdditional, watchedDelivery, watchedCommission, watchedAdvance]);
+
+
+    // --- AI Feature Handlers ---
+    const handleDictationComplete = (data) => {
+        // Map dictionary data to form fields
+        if (data.clientName) setValue('clientName', data.clientName);
+        if (data.persons) setValue('persons', data.persons);
+        if (data.cakeFlavor) setValue('cakeFlavor', data.cakeFlavor); // Array expected
+        if (data.filling) setValue('filling', data.filling); // Array expected
+        if (data.designDescription) setValue('designDescription', data.designDescription);
+        if (data.shape) setValue('shape', data.shape);
+        if (data.folioType) setValue('folioType', data.folioType);
+
+        setIsDictationOpen(false);
     };
 
-    // Mock Dictation Handler
-    const handleDictation = () => {
-        if (dictationStatus === 'listening') {
-            setDictationStatus('processing');
-            setTimeout(() => {
-                setDictationStatus('success');
-                setTimeout(() => setDictationStatus('idle'), 2000);
-            }, 2000);
-        } else {
-            setDictationStatus('listening');
+    const handleImageAnalysis = (analysisText) => {
+        const currentDesc = getValues('designDescription');
+        setValue('designDescription', (currentDesc ? currentDesc + '\n\n' : '') + analysisText);
+    };
+
+    // --- Form Submission ---
+    const onSubmit = async (data) => {
+        try {
+            const payload = {
+                ...data,
+                // Ensure number types
+                persons: parseInt(data.persons),
+                total: parseFloat(data.total),
+                deliveryCost: parseFloat(data.deliveryCost),
+                advancePayment: parseFloat(data.advancePayment),
+                isPaid: parseFloat(data.advancePayment) >= calculations.total,
+                // Map filling to objects if backend expects {name, hasCost}
+                filling: data.filling.map(f => ({ name: f, hasCost: false })), // Simplified for now
+                // Tiers mapping if active
+                tiers: folioType === 'Base/Especial' ? data.tiers : [],
+            };
+
+            await api.post('/folios', payload);
+            if (onSuccess) onSuccess();
+        } catch (error) {
+            alert('Error al guardar: ' + error.message);
         }
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-full">
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl shadow-lg flex flex-col h-full max-h-screen overflow-hidden relative">
+            <VoiceDictationModal
+                isOpen={isDictationOpen}
+                onClose={() => setIsDictationOpen(false)}
+                onDictationComplete={handleDictationComplete}
+            />
+
             {/* Header */}
-            <div className="bg-bakery-cream p-4 border-b flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <button onClick={onCancel} className="p-2 hover:bg-black/5 rounded-full">
-                        <ArrowLeft className="h-5 w-5 text-bakery-text" />
+            <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10">
+                <div className="flex items-center gap-3">
+                    <button type="button" onClick={onCancel} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                        <ArrowLeft className="text-gray-600" size={20} />
                     </button>
-                    <h2 className="text-xl font-serif text-bakery-text font-bold">Nuevo Pedido</h2>
+                    <h2 className="text-xl font-bold text-gray-800">
+                        {initialData ? 'Editar Pedido' : 'Nuevo Pedido'}
+                    </h2>
                 </div>
-                <button
-                    onClick={handleDictation}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${dictationStatus === 'listening'
-                            ? 'bg-red-100 text-red-600 ring-2 ring-red-400 ring-offset-2'
-                            : 'bg-white border text-gray-600 hover:bg-gray-50'
-                        }`}
-                >
-                    <Mic className={`h-4 w-4 ${dictationStatus === 'listening' ? 'animate-pulse' : ''}`} />
-                    {dictationStatus === 'listening' ? 'Escuchando...' : 'Dictar Pedido'}
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsDictationOpen(true)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors animate-pulse"
+                    >
+                        <Mic size={18} />
+                        Dictar
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 transition-colors"
+                    >
+                        <Save size={18} />
+                        {isSubmitting ? 'Guardando...' : 'Guardar'}
+                    </button>
+                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-                <form id="folio-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="flex-1 overflow-y-auto w-full">
+                <div className="flex flex-col lg:flex-row h-full">
 
-                    {/* --- Sección Cliente --- */}
-                    <div className="md:col-span-12">
-                        <h3 className="text-lg font-serif font-semibold text-bakery-text mb-4 border-b pb-2">Datos del Cliente</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <input required name="clientPhone" value={formData.clientPhone} onChange={handleChange} placeholder="Teléfono Principal*" className="input-bakery" />
-                            <input required name="clientName" value={formData.clientName} onChange={handleChange} placeholder="Nombre Completo*" className="input-bakery" />
-                            <input name="clientPhone2" value={formData.clientPhone2} onChange={handleChange} placeholder="Teléfono Secundario" className="input-bakery" />
-                        </div>
-                    </div>
+                    {/* LEFT COLUMN: Main Form */}
+                    <div className="flex-1 p-6 md:p-8 space-y-8">
 
-                    {/* --- Sección Detalles del Pedido --- */}
-                    <div className="md:col-span-8 space-y-6">
-                        {/* Fecha y Hora */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="label-bakery">Fecha de Entrega</label>
-                                <input required type="date" name="deliveryDate" value={formData.deliveryDate} onChange={handleChange} className="input-bakery" />
-                            </div>
-                            <div>
-                                <label className="label-bakery">Hora</label>
-                                <input required type="time" name="deliveryTime" value={formData.deliveryTime} onChange={handleChange} className="input-bakery" />
-                            </div>
-                        </div>
-
-                        {/* Especificaciones */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="label-bakery">Tipo de Pastel</label>
-                                <select name="folioType" value={formData.folioType} onChange={handleChange} className="input-bakery">
-                                    <option value="Normal">Normal</option>
-                                    <option value="Base/Especial">Base/Especial</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="label-bakery">Personas</label>
-                                <input type="number" name="persons" value={formData.persons} onChange={handleChange} className="input-bakery" />
-                            </div>
-                        </div>
-
-                        {/* Sabores y Rellenos */}
-                        <div>
-                            <label className="label-bakery block mb-2">Sabores de Pan</label>
-                            <div className="flex flex-wrap gap-2">
-                                {flavors.map(f => (
-                                    <button
-                                        key={f.id}
-                                        type="button"
-                                        onClick={() => handleArrayChange('cakeFlavor', f.name)}
-                                        className={`chip-bakery ${formData.cakeFlavor.includes(f.name) ? 'active' : ''}`}
-                                    >
-                                        {f.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="label-bakery block mb-2">Rellenos</label>
-                            <div className="flex flex-wrap gap-2">
-                                {fillings.map(f => (
-                                    <button
-                                        key={f.id}
-                                        type="button"
-                                        onClick={() => handleArrayChange('filling', f.name)}
-                                        className={`chip-bakery ${formData.filling.includes(f.name) ? 'active' : ''}`}
-                                    >
-                                        {f.name} {f.price > 0 && <span className="text-xs ml-1 opacity-70">(${f.price})</span>}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Descripción y Dedicatoria */}
-                        <textarea name="designDescription" value={formData.designDescription} onChange={handleChange} placeholder="Descripción del diseño..." className="input-bakery md:col-span-2 h-24" />
-                        <input name="dedication" value={formData.dedication} onChange={handleChange} placeholder="Dedicatoria (opcional)" className="input-bakery md:col-span-2" />
-
-                        {/* Adicionales */}
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="label-bakery">Adicionales / Extras</label>
-                                <button type="button" onClick={handleAddAdditional} className="text-sm text-blue-600 hover:underline flex items-center">
-                                    <Plus className="h-3 w-3 mr-1" /> Agregar Item
-                                </button>
-                            </div>
-                            {formData.additional.map((item, index) => (
-                                <div key={index} className="flex gap-2 mb-2">
+                        {/* Section: Client */}
+                        <section className="space-y-4">
+                            <h3 className="text-lg font-bold text-gray-700 border-b pb-2">Información del Cliente</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-600 mb-1">Nombre Completo</label>
                                     <input
-                                        placeholder="Descripción"
-                                        value={item.description}
-                                        onChange={(e) => handleUpdateAdditional(index, 'description', e.target.value)}
-                                        className="input-bakery flex-1"
+                                        {...register('clientName', { required: 'Nombre requerido' })}
+                                        className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        placeholder="Ej. María López"
                                     />
-                                    <input
-                                        type="number"
-                                        placeholder="$"
-                                        value={item.price}
-                                        onChange={(e) => handleUpdateAdditional(index, 'price', e.target.value)}
-                                        className="input-bakery w-24"
-                                    />
-                                    <button type="button" onClick={() => handleRemoveAdditional(index)} className="text-red-400 hover:text-red-600 p-2">
-                                        <Trash className="h-4 w-4" />
+                                    {errors.clientName && <span className="text-red-500 text-xs">{errors.clientName.message}</span>}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono</label>
+                                        <input
+                                            {...register('clientPhone', { required: 'Teléfono requerido' })}
+                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            placeholder="10 dígitos"
+                                        />
+                                        {errors.clientPhone && <span className="text-red-500 text-xs">{errors.clientPhone.message}</span>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">Fecha Entrega</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="date"
+                                                {...register('deliveryDate', { required: true })}
+                                                className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                                            />
+                                            <input
+                                                type="time"
+                                                {...register('deliveryTime')}
+                                                className="w-24 border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Section: Cake Details */}
+                        <section className="space-y-4">
+                            <div className="flex justify-between items-center border-b pb-2">
+                                <h3 className="text-lg font-bold text-gray-700">Detalles del Pastel</h3>
+                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setValue('folioType', 'Normal')}
+                                        className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${folioType === 'Normal' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                                    >
+                                        Normal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setValue('folioType', 'Base/Especial')}
+                                        className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${folioType === 'Base/Especial' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+                                    >
+                                        Base / Especial
                                     </button>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+
+                            {/* Normal Mode */}
+                            {folioType === 'Normal' && (
+                                <div className="space-y-6 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">Tamaño (Personas)</label>
+                                            <input
+                                                type="number"
+                                                {...register('persons')}
+                                                className="w-full border border-gray-300 rounded-lg p-2.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-1">Forma</label>
+                                            <select {...register('shape')} className="w-full border border-gray-300 rounded-lg p-2.5 bg-white">
+                                                <option value="Redondo">Redondo</option>
+                                                <option value="Cuadrado">Cuadrado</option>
+                                                <option value="Plancha">Plancha</option>
+                                                <option value="Rectangular">Rectangular</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <IngredientPicker
+                                            type="flavor"
+                                            label="Sabor del Pan"
+                                            selected={watchedFlavors}
+                                            onChange={(val) => setValue('cakeFlavor', val)}
+                                        />
+
+                                        <div className="relative">
+                                            {isFillingBlocked && (
+                                                <div className="absolute -top-6 right-0 text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                                                    Sin relleno para este sabor
+                                                </div>
+                                            )}
+                                            <IngredientPicker
+                                                type="filling"
+                                                label="Relleno"
+                                                selected={watchedFillings}
+                                                onChange={(val) => setValue('filling', val)}
+                                                disabled={isFillingBlocked}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Multi-Tier Mode */}
+                            {folioType === 'Base/Especial' && (
+                                <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                                    <table className="w-full border-collapse">
+                                        <thead className="bg-gray-100 text-gray-600 text-xs uppercase">
+                                            <tr>
+                                                <th className="p-3 text-left">Piso</th>
+                                                <th className="p-3 text-left">Personas</th>
+                                                <th className="p-3 text-left">Sabor</th>
+                                                <th className="p-3 text-left">Relleno</th>
+                                                <th className="p-3 text-right">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {tierFields.map((field, index) => (
+                                                <tr key={field.id}>
+                                                    <td className="p-3 font-medium text-gray-500">#{index + 1}</td>
+                                                    <td className="p-3">
+                                                        <input
+                                                            {...register(`tiers.${index}.persons`)}
+                                                            className="w-16 border rounded p-1 text-sm"
+                                                            placeholder="Pax"
+                                                            type="number"
+                                                        />
+                                                    </td>
+                                                    <td className="p-3">
+                                                        {/* Simplified selector for table */}
+                                                        <input
+                                                            {...register(`tiers.${index}.flavor`)}
+                                                            className="w-full border rounded p-1 text-sm"
+                                                            placeholder="Sabor"
+                                                        />
+                                                    </td>
+                                                    <td className="p-3">
+                                                        <input
+                                                            {...register(`tiers.${index}.filling`)}
+                                                            className="w-full border rounded p-1 text-sm"
+                                                            placeholder="Relleno"
+                                                        />
+                                                    </td>
+                                                    <td className="p-3 text-right">
+                                                        <button type="button" onClick={() => removeTier(index)} className="text-red-400 hover:text-red-600">
+                                                            <Trash size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {tierFields.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="5" className="p-6 text-center text-gray-400 text-sm">
+                                                        Agrega pisos a tu estructura
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                        <tfoot className="bg-gray-50">
+                                            <tr>
+                                                <td colSpan="5" className="p-2 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => appendTier(TIER_DEFAULTS)}
+                                                        className="text-blue-600 text-sm font-medium hover:underline flex items-center justify-center gap-1"
+                                                    >
+                                                        <Plus size={16} /> Agregar Piso
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* Descripción & IA Image Analysis */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-600 mb-1">Descripción / Diseño</label>
+                                    <textarea
+                                        {...register('designDescription')}
+                                        className="w-full border border-gray-300 rounded-lg p-3 h-48 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                        placeholder="Detalles específicos del decorado..."
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-1">
+                                        <Sparkles size={14} className="text-purple-500" />
+                                        Análisis Visual
+                                    </label>
+                                    <ImageAnalyzer onAnalysisComplete={handleImageAnalysis} />
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
-                    {/* --- Sección Totales (Sticky) --- */}
-                    <div className="md:col-span-4">
-                        <div className="bg-bakery-highlight/30 p-6 rounded-xl border border-bakery-accent/20 sticky top-0">
-                            <h3 className="text-lg font-serif font-bold text-bakery-text mb-4 flex items-center gap-2">
-                                <Calculator className="h-5 w-5" /> Resumen
+                    {/* RIGHT COLUMN: Calculations & AI Sidebar */}
+                    <div className="lg:w-80 border-l border-gray-100 flex flex-col bg-gray-50 max-h-screen overflow-hidden">
+
+                        {/* AI Suggestions Sidebar (Top Half) */}
+                        <div className="flex-1 overflow-y-auto border-b border-gray-200">
+                            <AiSidebar formValues={allValues} />
+                        </div>
+
+                        {/* Calculations Panel (Bottom Half) */}
+                        <div className="p-6 bg-white shadow-up z-10">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                                <Calculator className="text-blue-500" />
+                                Totales
                             </h3>
 
-                            <div className="space-y-3 text-sm">
-                                <div>
-                                    <label className="text-gray-600 text-xs uppercase tracking-wider">Precio Base</label>
-                                    <div className="flex items-center mt-1">
-                                        <span className="text-gray-500 mr-2">$</span>
-                                        <input
-                                            type="number"
-                                            name="total"
-                                            value={formData.total}
-                                            onChange={handleChange}
-                                            className="w-full bg-white border rounded px-2 py-1 font-medium"
-                                        />
-                                    </div>
+                            {/* Re-implementing compact calc view for sidebar */}
+                            <div className="space-y-2 text-sm mb-4">
+                                <div className="flex justify-between items-center">
+                                    <span>Base</span>
+                                    <input type="number" {...register('total')} className="w-20 text-right border rounded p-1" placeholder="0" />
                                 </div>
-
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Costo Rellenos:</span>
-                                    <span className="font-medium">+${totals.fillingCost}</span>
+                                <div className="flex justify-between items-center">
+                                    <span>Envío</span>
+                                    <input type="number" {...register('deliveryCost')} className="w-20 text-right border rounded p-1" placeholder="0" />
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Costo Extras:</span>
-                                    <span className="font-medium">+${formData.additional.reduce((acc, curr) => acc + (parseFloat(curr.price) || 0), 0)}</span>
+                                <div className="flex justify-between items-center text-xs text-gray-500">
+                                    <span>Extras ({watchedAdditional.length})</span>
+                                    <span>${watchedAdditional.reduce((acc, i) => acc + (parseFloat(i.price) || 0), 0)}</span>
                                 </div>
-
-                                <div>
-                                    <label className="text-gray-600 text-xs uppercase tracking-wider">Envío</label>
-                                    <div className="flex items-center mt-1">
-                                        <span className="text-gray-500 mr-2">$</span>
-                                        <input
-                                            type="number"
-                                            name="deliveryCost"
-                                            value={formData.deliveryCost}
-                                            onChange={handleChange}
-                                            className="w-full bg-white border rounded px-2 py-1 font-medium"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between py-2 border-t border-dashed border-gray-300">
-                                    <span className="text-gray-700">Comisión (5%)</span>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" name="addCommissionToCustomer" checked={formData.addCommissionToCustomer} onChange={handleChange} className="sr-only peer" />
-                                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-bakery-accent"></div>
-                                    </label>
-                                </div>
-                                {formData.addCommissionToCustomer && (
-                                    <div className="flex justify-between text-bakery-accent font-medium">
-                                        <span>+ Comisión:</span>
-                                        <span>${totals.commission}</span>
-                                    </div>
-                                )}
-
-                                <div className="pt-4 border-t border-gray-400 mt-2">
-                                    <div className="flex justify-between items-end mb-1">
-                                        <span className="text-xl font-bold text-bakery-text">TOTAL:</span>
-                                        <span className="text-2xl font-bold text-bakery-primary">${totals.total}</span>
-                                    </div>
-                                    <div className="text-xs text-right text-gray-500">
-                                        Anticipo Mínimo Recomendado: ${totals.anticipoMinimo}
-                                    </div>
-                                </div>
-
-                                <div className="mt-4">
-                                    <label className="text-gray-600 text-xs uppercase tracking-wider">Anticipo Recibido</label>
-                                    <div className="flex items-center mt-1">
-                                        <span className="text-green-600 font-bold mr-2">$</span>
-                                        <input
-                                            type="number"
-                                            name="advancePayment"
-                                            value={formData.advancePayment}
-                                            onChange={handleChange}
-                                            className="w-full bg-green-50 border border-green-200 rounded px-2 py-2 font-bold text-green-800"
-                                        />
-                                    </div>
-                                    <div className="text-right mt-1 text-sm">
-                                        <span className="text-gray-500">Resta: </span>
-                                        <span className={`font-bold ${totals.total - formData.advancePayment <= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            ${Math.max(0, totals.total - formData.advancePayment)}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {calculating && (
-                                    <div className="text-xs text-center text-blue-500 animate-pulse mt-2">
-                                        Calculando...
-                                    </div>
-                                )}
                             </div>
+
+                            {/* Dynamic Extras List Condensed */}
+                            <div className="mb-4">
+                                <button type="button" onClick={() => appendAdditional({ description: '', price: 0 })} className="text-xs text-blue-500 hover:underline flex items-center gap-1 mb-1">
+                                    <Plus size={12} /> Agregar Extra
+                                </button>
+                                <div className="space-y-1 max-h-24 overflow-y-auto">
+                                    {additionalFields.map((field, index) => (
+                                        <div key={field.id} className="flex gap-1">
+                                            <input {...register(`additional.${index}.description`)} className="flex-1 text-xs border rounded p-1" placeholder="Item" />
+                                            <input type="number" {...register(`additional.${index}.price`)} className="w-12 text-xs border rounded p-1 text-right" placeholder="$" />
+                                            <button type="button" onClick={() => removeAdditional(index)}><Trash size={12} className="text-gray-400" /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="border-t pt-2 space-y-1">
+                                <label className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                                    <input type="checkbox" {...register('addCommissionToCustomer')} /> Comisión (+5%)
+                                </label>
+                                <div className="flex justify-between font-bold text-lg">
+                                    <span>Total</span>
+                                    <span className="text-blue-600">${calculations.total}</span>
+                                </div>
+                            </div>
+
+                            {/* Payment Input Compact */}
+                            <div className="mt-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <div className="flex justify-between text-xs text-blue-800 mb-1">
+                                    <span>Anticipo</span>
+                                    <span>Min: ${calculations.minAdvance}</span>
+                                </div>
+                                <input
+                                    type="number"
+                                    {...register('advancePayment')}
+                                    className="w-full text-lg font-bold text-gray-800 outline-none bg-white p-1 rounded border border-blue-200"
+                                />
+                                <div className="text-right mt-1 text-xs font-medium">
+                                    {calculations.balance === 0 ? <span className="text-green-600">Pagado</span> : <span className="text-red-500">Resta: ${calculations.balance}</span>}
+                                </div>
+                            </div>
+
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button onClick={onCancel} className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-200 font-medium">
-                    Cancelar
-                </button>
-                <button
-                    type="submit"
-                    form="folio-form"
-                    disabled={loading}
-                    className="px-6 py-2 rounded-lg bg-bakery-accent text-white hover:bg-bakery-text hover:shadow-lg transition-all font-medium flex items-center gap-2"
-                >
-                    {loading ? 'Guardando...' : <><Save className="h-4 w-4" /> Guardar Pedido</>}
-                </button>
-            </div>
-
-            <DictationFeedback status={dictationStatus} />
-        </div>
+        </form>
     );
 };
 

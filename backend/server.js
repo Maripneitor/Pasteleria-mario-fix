@@ -46,7 +46,7 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ALERTA: Se ha eliminado el serving de archivos estáticos del root (antiguo frontend)
-// app.use(express.static(__dirname));
+// ALERTA: Se ha eliminado el serving de archivos estáticos del root (antiguo frontend)
 
 // --- RUTAS DE LA API ---
 app.get('/', (req, res) => {
