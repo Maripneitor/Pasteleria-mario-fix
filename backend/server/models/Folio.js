@@ -72,6 +72,10 @@ const Folio = sequelize.define('Folio', {
     type: DataTypes.ENUM('Pendiente', 'Nuevo', 'En Producción', 'Listo para Entrega', 'Entregado', 'Cancelado'),
     defaultValue: 'Nuevo'
   },
+  signature: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   imageUrls: {
     type: DataTypes.JSON,
     allowNull: true

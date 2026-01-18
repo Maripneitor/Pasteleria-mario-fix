@@ -34,6 +34,9 @@ router.use(authMiddleware);
 // --- RUTA PARA PDFs MASIVOS (ETIQUETAS Y COMANDAS) ---
 router.get('/day-summary-pdf', folioController.generateDaySummaryPdf);
 
+// --- Cash Close ---
+router.get('/cash-close', authorize(['Administrador', 'Dueño', 'Empleado']), folioController.getCashClose);
+
 // --- RUTA PARA OBTENER ESTADÍSTICAS (SÓLO ADMIN) ---
 router.get('/statistics', authorize('Administrador'), folioController.getStatistics);
 

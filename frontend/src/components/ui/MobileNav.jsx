@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, ShoppingBag, Search, LogOut } from 'lucide-react';
+import { Home, ShoppingBag, Search, LogOut, Trello } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -12,6 +12,7 @@ const MobileNav = ({ onLogout }) => {
     const navItems = [
         { icon: Home, path: '/dashboard', label: 'Home' },
         { icon: ShoppingBag, path: '/folios', label: 'Pedidos' },
+        { icon: Trello, path: '/produccion', label: 'Prod' },
         { icon: Search, path: '/calendario', label: 'Buscar' }, // Mapping 'Buscar' to Calendar/Search logic
     ];
 

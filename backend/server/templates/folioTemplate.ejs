@@ -261,11 +261,26 @@
 
                                 <div class="header">
                                     <div class="header-info">
-                                        <div class="logo">Pastelería La Fiesta</div>
-                                        <div class="header-date">
-                                            <%= folio.formattedDeliveryDate %>
-                                        </div>
-                                        <div class="header-time"><b>Hora: <%= folio.formattedDeliveryTime %></b></div>
+                                        <% if (folio.ownerSeal) { %>
+                                            <div
+                                                style="position: absolute; top: 0; right: 0; opacity: 0.15; z-index: -2;">
+                                                <img src="<%= folio.ownerSeal %>" style="width: 150px; height: auto;">
+                                            </div>
+                                            <!-- Opción B: Sello junto al logo -->
+                                            <div
+                                                style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                                <img src="<%= folio.ownerSeal %>"
+                                                    style="height: 40px; width: auto; object-fit: contain;">
+                                                <div class="logo">Pastelería La Fiesta</div>
+                                            </div>
+                                            <% } else { %>
+                                                <div class="logo">Pastelería La Fiesta</div>
+                                                <% } %>
+                                                    <div class="header-date">
+                                                        <%= folio.formattedDeliveryDate %>
+                                                    </div>
+                                                    <div class="header-time"><b>Hora: <%= folio.formattedDeliveryTime %>
+                                                                </b></div>
                                     </div>
                                     <div class="folio-box" style="background-color: <%= folio.dayColor %>;">
                                         <div class="folio-label" style="color: <%= folio.textColor %>;">Folio</div>

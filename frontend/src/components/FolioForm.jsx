@@ -5,6 +5,8 @@ import IngredientPicker from './IngredientPicker';
 import VoiceDictationModal from './VoiceDictationModal';
 import AiSidebar from './AiSidebar';
 import ImageAnalyzer from './ImageAnalyzer';
+import VisualCakeBuilder from './VisualCakeBuilder';
+import ProductionLabelPreview from './ProductionLabelPreview';
 import api from '../services/api';
 
 // --- Constants & Helpers ---
@@ -398,7 +400,21 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
                     <div className="lg:w-80 border-l border-gray-100 flex flex-col bg-gray-50 max-h-screen overflow-hidden">
 
                         {/* AI Suggestions Sidebar (Top Half) */}
-                        <div className="flex-1 overflow-y-auto border-b border-gray-200">
+                        <div className="flex-1 overflow-y-auto border-b border-gray-200 relative">
+                            {folioType === 'Base/Especial' && (
+                                <div className="p-4 border-b border-gray-100 bg-amber-50/50">
+                                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Estructura Visual</h4>
+                                    <VisualCakeBuilder tiers={tierFields} shape={allValues.shape} />
+                                </div>
+                            )}
+
+                            {/* NEW: Label Preview for all types */}
+                            <div className="p-4 border-b border-gray-100 bg-gray-50">
+                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2 text-center">Vista Previa Etiqueta</h4>
+                                <div className="transform scale-90 origin-top">
+                                    <ProductionLabelPreview formData={allValues} />
+                                </div>
+                            </div>
                             <AiSidebar formValues={allValues} />
                         </div>
 

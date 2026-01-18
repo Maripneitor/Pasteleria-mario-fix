@@ -224,6 +224,15 @@ exports.createFolio = async (req, res) => {
             await t.rollback();
         }
         console.error('❌ ERROR DETALLADO AL CREAR FOLIO:', error);
+
+        // Manejo específico para cambios de esquema faltantes
+        if (error.original && error.original.code === 'ER_BAD_FIELD_ERROR') {
+            return res.status(500).json({
+                message: 'Error de configuración de base de datos: Columna faltante. Contacte al administrador.',
+                detail: error.original.sqlMessage
+            });
+        }
+
         res.status(400).json({ message: `Error al crear el folio: ${error.message}`, error: error.stack });
     }
 };
@@ -253,18 +262,51 @@ exports.getAllFolios = async (req, res) => {
             whereClause.status = { [Op.ne]: 'Pendiente' };
         }
 
+        // --- MULTI-TENANCY FILTER ---
+        const user = req.user;
+
+        // Si NO es administrador, aplicar filtro estricto por ownerId
+        if (user.role !== 'Administrador') {
+            let rootOwnerId = null;
+
+            if (user.role === 'Dueño') {
+                rootOwnerId = user.id;
+            } else {
+                // Empleado u otro rol
+                rootOwnerId = user.ownerId;
+            }
+
+            if (rootOwnerId) {
+                // Buscar todos los usuarios que pertenecen a este Dueño
+                const branchUsers = await User.findAll({
+                    where: {
+                        [Op.or]: [
+                            { id: rootOwnerId },
+                            { ownerId: rootOwnerId }
+                        ]
+                    },
+                    attributes: ['id']
+                });
+
+                const allowedIds = branchUsers.map(u => u.id);
+                whereClause.responsibleUserId = { [Op.in]: allowedIds };
+            } else {
+                // Fallback: solo propios
+                whereClause.responsibleUserId = user.id;
+            }
+        }
 
         const folios = await Folio.findAll({
             where: whereClause,
             include: [
                 { model: Client, as: 'client', attributes: ['name', 'phone', 'phone2'], required: false },
-                { model: User, as: 'responsibleUser', attributes: ['username'], required: false } // Hacer opcional por si el usuario fue eliminado
+                { model: User, as: 'responsibleUser', attributes: ['username'], required: false }
             ],
-            // Ordenar por fecha y hora, excepto si se piden los pendientes (más nuevos primero)
             order: status === 'Pendiente' ? [['createdAt', 'DESC']] : [['deliveryDate', 'ASC'], ['deliveryTime', 'ASC']]
         });
         res.status(200).json(folios);
-    } catch (error) {
+
+    } catch (error) { // Catch block correctly linked
         console.error("Error en getAllFolios:", error);
         res.status(500).json({ message: 'Error al obtener los folios', error: error.message });
     }
@@ -464,6 +506,14 @@ exports.updateFolio = async (req, res) => {
             await t.rollback();
         }
         console.error(`❌ ERROR AL ACTUALIZAR FOLIO ${folioId}:`, error);
+
+        if (error.original && error.original.code === 'ER_BAD_FIELD_ERROR') {
+            return res.status(500).json({
+                message: 'Error de configuración de base de datos: Columna faltante (probablemente "signature"). Ejecute las migraciones.',
+                detail: error.original.sqlMessage
+            });
+        }
+
         res.status(400).json({ message: `Error al actualizar el folio: ${error.message}`, error: error.stack });
     }
 };
@@ -486,6 +536,12 @@ exports.deleteFolio = async (req, res) => {
         if (folio.imageUrls && folio.imageUrls.length > 0) {
             for (const imageUrl of folio.imageUrls) {
                 try {
+                    // Si es una URL remota (GCS), no intentar borrar del sistema de archivos local
+                    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                        console.log(`ℹ️ Saltando eliminación local de imagen remota: ${imageUrl}`);
+                        continue;
+                    }
+
                     const imagePath = path.resolve(__dirname, '..', '..', imageUrl);
                     await fs.unlink(imagePath);
                     console.log(`Imagen eliminada: ${imagePath}`);
@@ -527,7 +583,7 @@ exports.generateFolioPdf = async (req, res) => {
         const folio = await Folio.findByPk(folioId, {
             include: [
                 { model: Client, as: 'client', required: false },
-                { model: User, as: 'responsibleUser', required: false } // Usuario que creó/último editó? Asumimos creador por ahora
+                { model: User, as: 'responsibleUser', required: false, attributes: ['id', 'username', 'ownerId', 'ownerSeal'] }
             ]
         });
         if (!folio) { return res.status(404).json({ message: 'Folio no encontrado' }); }
@@ -549,6 +605,46 @@ exports.generateFolioPdf = async (req, res) => {
 
         // Preparación de Datos para PDF
         const folioDataForPdf = folio.toJSON();
+
+        // -----------------------------------------------------
+        // Lógica de "Sello del Dueño"
+        // -----------------------------------------------------
+        let customSealUrl = null;
+        if (folio.responsibleUser) {
+            // Si el usuario es dueño directo
+            if (folio.responsibleUser.ownerSeal) {
+                customSealUrl = folio.responsibleUser.ownerSeal;
+            }
+            // Si el usuario es empleado, buscar el sello de su dueño (ownerId)
+            else if (folio.responsibleUser.ownerId) {
+                const ownerUser = await User.findByPk(folio.responsibleUser.ownerId, { attributes: ['ownerSeal'] });
+                if (ownerUser && ownerUser.ownerSeal) {
+                    customSealUrl = ownerUser.ownerSeal;
+                }
+            }
+        }
+        // Fallback: Si no hay sello personalizado, usar null (el template manejará el logo por defecto)
+        // O si se requiere un "default explícito" por variable de entorno o constante:
+        // customSealUrl = customSealUrl || 'https://ruta-a-sello-default.png'; 
+        folioDataForPdf.ownerSeal = customSealUrl;
+        // -----------------------------------------------------
+
+        // -----------------------------------------------------
+        // Lógica de "Firma" (Robustez)
+        // -----------------------------------------------------
+        try {
+            if (folioDataForPdf.signature) {
+                // Validar que sea un string y parezca una imagen base64
+                if (typeof folioDataForPdf.signature !== 'string' || !folioDataForPdf.signature.startsWith('data:image/')) {
+                    console.warn(`⚠️ Firma inválida detectada en folio ${folio.folioNumber}. Usando fallback.`);
+                    folioDataForPdf.signature = null; // El template mostrará "Firma no disponible" o hueco vacío
+                }
+            }
+        } catch (sigError) {
+            console.error("Error procesando firma para PDF:", sigError);
+            folioDataForPdf.signature = null;
+        }
+
 
         // Parsear JSON fields (con manejo de errores)
         ['tiers', 'cakeFlavor', 'filling', 'additional', 'complements'].forEach(key => {
@@ -928,6 +1024,70 @@ exports.generateCommissionReport = async (req, res) => {
     }
 };
 
+// --- GET CASH CLOSE (Cierre de Caja) ---
+exports.getCashClose = async (req, res) => {
+    try {
+        const { date } = req.query; // YYYY-MM-DD (optional, default current date)
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        const user = req.user;
+
+        let ownerIdForFilter = null;
+        if (user.role === 'Dueño') {
+            ownerIdForFilter = user.id;
+        } else if (user.role === 'Empleado') {
+            ownerIdForFilter = user.ownerId;
+        } else if (user.role === 'Administrador' && req.query.ownerId) {
+            ownerIdForFilter = req.query.ownerId; // Admin can see specific owner
+        }
+
+        let whereClause = {
+            deliveryDate: targetDate, // Or createdAt? Business decision: Cash close usually based on delivery or payment date? Assuming Delivery Date for "Sales of the day"
+            status: { [Op.ne]: 'Cancelado' }
+        };
+
+        if (ownerIdForFilter) {
+            // Get all responsible user IDs for this owner branch
+            const branchUsers = await User.findAll({
+                where: { [Op.or]: [{ id: ownerIdForFilter }, { ownerId: ownerIdForFilter }] },
+                attributes: ['id']
+            });
+            whereClause.responsibleUserId = { [Op.in]: branchUsers.map(u => u.id) };
+        } else if (user.role !== 'Administrador') {
+            // Safety fallback
+            whereClause.responsibleUserId = user.id;
+        }
+
+
+        const folios = await Folio.findAll({
+            where: whereClause,
+            attributes: ['total', 'advancePayment', 'balance', 'isPaid']
+        });
+
+        // Sumar totales
+        let totalSales = 0;
+        let totalAdvances = 0;
+        let pendingBalance = 0;
+
+        folios.forEach(f => {
+            totalSales += parseFloat(f.total || 0);
+            totalAdvances += parseFloat(f.advancePayment || 0);
+            pendingBalance += parseFloat(f.balance || 0);
+        });
+
+        res.status(200).json({
+            date: targetDate,
+            totalSales: totalSales.toFixed(2),
+            totalAdvances: totalAdvances.toFixed(2),
+            pendingBalance: pendingBalance.toFixed(2),
+            orderCount: folios.length
+        });
+
+    } catch (error) {
+        console.error("Error en getCashClose:", error);
+        res.status(500).json({ message: 'Error al obtener cierre de caja', error: error.message });
+    }
+};
+
 // --- UPDATE FOLIO STATUS ---
 exports.updateFolioStatus = async (req, res) => {
     try {
@@ -937,11 +1097,21 @@ exports.updateFolioStatus = async (req, res) => {
         if (!folio) return res.status(404).json({ message: 'Folio no encontrado' });
         if (folio.status === 'Cancelado') return res.status(400).json({ message: 'Folio cancelado no se puede modificar.' });
 
-        const { isPrinted, fondantChecked, dataChecked } = req.body;
+        const { isPrinted, fondantChecked, dataChecked, status } = req.body;
         const updateData = {};
         if (isPrinted !== undefined) updateData.isPrinted = Boolean(isPrinted);
         if (fondantChecked !== undefined) updateData.fondantChecked = Boolean(fondantChecked);
         if (dataChecked !== undefined) updateData.dataChecked = Boolean(dataChecked);
+
+        // --- Validacion de Status ---
+        const validStatuses = ['Pendiente', 'Nuevo', 'En Producción', 'Listo para Entrega', 'Entregado', 'Cancelado'];
+        if (status !== undefined) {
+            if (validStatuses.includes(status)) {
+                updateData.status = status;
+            } else {
+                return res.status(400).json({ message: 'Estatus inválido.' });
+            }
+        }
 
         if (Object.keys(updateData).length === 0) return res.status(400).json({ message: 'No hay estados para actualizar.' });
 

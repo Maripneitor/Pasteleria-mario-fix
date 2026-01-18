@@ -43,10 +43,15 @@ export const AuthProvider = ({ children }) => {
 
         localStorage.setItem('token', token);
         const decoded = decodeToken(token);
-        const userObj = { ...decoded, email, token }; // Ensure email is available if not in token
+        const userObj = { ...decoded, email, token };
 
         setUser(userObj);
         return userObj;
+    };
+
+    const register = async (userData) => {
+        const response = await api.post('/auth/register', userData);
+        return response.data;
     };
 
     const logout = () => {
@@ -56,7 +61,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, register, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

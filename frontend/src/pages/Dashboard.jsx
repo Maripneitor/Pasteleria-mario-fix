@@ -3,14 +3,33 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import ProductionStepper from '../components/ui/ProductionStepper';
-import NotificationCard from '../components/ui/NotificationCard';
 import { motion } from 'framer-motion';
 import { useToast } from '../context/ToastSystem';
+import NotificationCard from '../components/ui/NotificationCard';
+import QuickActionBar from '../components/dashboard/QuickActionBar';
+import ChalkMetricsBoard from '../components/dashboard/ChalkMetricsBoard';
+import CashClosing from '../components/dashboard/CashClosing';
+import { QRCodeSVG } from 'qrcode.react';
+import api from '../services/api';
+import AdminUserManagement from '../components/admin/AdminUserManagement';
 
 const Dashboard = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { showSuccess } = useToast();
+    const [inviteToken, setInviteToken] = React.useState(null);
+    const [showQrModal, setShowQrModal] = React.useState(false);
+
+    const generateInvite = async () => {
+        try {
+            const response = await api.post('/auth/generate-invite');
+            setInviteToken(response.data.token);
+            setShowQrModal(true);
+        } catch (error) {
+            console.error("Error generating invite:", error);
+            alert("Error generando invitación. Solo dueños pueden hacerlo.");
+        }
+    };
 
     // Default role just in case
     const role = user?.role || 'Guest';
@@ -81,6 +100,9 @@ const Dashboard = () => {
                         </motion.div>
                     </div>
 
+                    {/* Quick Actions Bar */}
+                    <QuickActionBar role={role} />
+
                     {/* Role Based Content - Cleaned Up */}
                     {role === 'Administrador' && (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -96,15 +118,8 @@ const Dashboard = () => {
                                 </motion.div>
 
                                 {/* Main Graph/Content Area */}
-                                <motion.div
-                                    variants={letterVariants}
-                                    className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 min-h-[300px] flex items-center justify-center relative overflow-hidden group hover:shadow-md transition-shadow duration-300"
-                                >
-                                    <div className="text-center z-10">
-                                        <h3 className="text-lg font-semibold text-gray-700 mb-2">Resumen Semanal</h3>
-                                        <p className="text-gray-400 text-sm">Próximamente gráficas interactivas</p>
-                                    </div>
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-red-50/20 to-orange-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <motion.div variants={letterVariants}>
+                                    <ChalkMetricsBoard />
                                 </motion.div>
                             </div>
 
@@ -115,29 +130,79 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {role === 'Vendedor' && (
-                        <motion.div
-                            className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                            variants={containerVariants}
-                        >
-                            <DashboardAction
-                                title="Nuevo Pedido"
-                                desc="Crear orden personalizada"
-                                color="from-red-500 to-red-600"
-                                onClick={() => navigate('/folio/nuevo')}
-                                icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>}
-                            />
-                            <DashboardAction
-                                title="Ver Calendario"
-                                desc="Consultar fechas de entrega"
-                                color="from-blue-500 to-blue-600"
-                                onClick={() => navigate('/calendario')}
-                                icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-                            />
+                    {(role === 'Vendedor' || role === 'Dueño' || role === 'Empleado') && (
+                        <div className="space-y-6">
+                            <motion.div
+                                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                                variants={containerVariants}
+                            >
+                                <DashboardAction
+                                    title="Nuevo Pedido"
+                                    desc="Crear orden personalizada"
+                                    color="from-red-500 to-red-600"
+                                    onClick={() => navigate('/folio/nuevo')}
+                                    icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>}
+                                />
+                                <DashboardAction
+                                    title="Ver Calendario"
+                                    desc="Consultar fechas de entrega"
+                                    color="from-blue-500 to-blue-600"
+                                    onClick={() => navigate('/calendario')}
+                                    icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                                />
+                                {/* OWNER ONLY ACTION */}
+                                {role === 'Dueño' && (
+                                    <>
+                                        <DashboardAction
+                                            title="Registrar Empleado"
+                                            desc="Invitar vía QR"
+                                            color="from-amber-600 to-amber-700"
+                                            onClick={generateInvite}
+                                            icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
+                                        />
+                                        {showQrModal && (
+                                            <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowQrModal(false)}>
+                                                <div className="bg-white p-8 rounded-3xl max-w-sm w-full text-center space-y-4 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+                                                    <h3 className="text-2xl font-bold text-gray-800">Escanea para Unirte</h3>
+                                                    <p className="text-gray-500 text-sm">Este código vincula al nuevo empleado contigo.</p>
+                                                    <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-200 inline-block">
+                                                        {inviteToken && (
+                                                            <QRCodeSVG
+                                                                value={`${window.location.origin}/register?inviteToken=${inviteToken}`}
+                                                                size={200}
+                                                                level="H"
+                                                                includeMargin={true}
+                                                                imageSettings={{
+                                                                    src: "/vite.svg",
+                                                                    x: undefined,
+                                                                    y: undefined,
+                                                                    height: 24,
+                                                                    width: 24,
+                                                                    excavate: true,
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-gray-400">Válido por 24 horas</p>
+                                                    <button onClick={() => setShowQrModal(false)} className="w-full py-3 rounded-xl bg-gray-100 font-bold text-gray-600 hover:bg-gray-200">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </motion.div>
+
+                            {/* CASH CLOSING - CHALKBOARD */}
+                            {(role === 'Dueño' || role === 'Vendedor') && (
+                                <motion.div variants={letterVariants}>
+                                    <CashClosing />
+                                </motion.div>
+                            )}
+
                             <div className="md:col-span-2">
                                 <NotificationCard message="Recordatorio" text="Revisar pedidos para entrega de mañana." />
                             </div>
-                        </motion.div>
+                        </div>
                     )}
 
                     {role === 'Repostero' && (

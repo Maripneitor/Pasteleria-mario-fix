@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Home, Search, ShoppingBag, LogOut } from 'lucide-react';
+import { Home, ShoppingBag, Plus, Search, Trello, BarChart2, Package, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const DesktopSidebar = ({ onLogout }) => {
@@ -31,6 +31,35 @@ const DesktopSidebar = ({ onLogout }) => {
                         tooltip="Pedidos"
                     />
                     <NavIcon
+                        Icon={Trello}
+                        active={location.pathname === '/produccion'}
+                        onClick={() => navigate('/produccion')}
+                        tooltip="Producción"
+                    />
+
+                    <div className="w-8 h-px bg-gray-200 my-2 mx-auto"></div>
+
+                    <NavIcon
+                        Icon={BarChart2}
+                        active={location.pathname === '/estadisticas'}
+                        onClick={() => navigate('/estadisticas')}
+                        tooltip="Estadísticas"
+                    />
+                    {/* Inventory Hidden for Clients
+                     <NavIcon
+                        Icon={Package}
+                        active={location.pathname === '/inventario'}
+                        onClick={() => navigate('/inventario')}
+                        tooltip="Inventario"
+                    /> 
+                    */}
+                    <NavIcon
+                        Icon={Users}
+                        active={location.pathname === '/clientes'}
+                        onClick={() => navigate('/clientes')}
+                        tooltip="Clientes"
+                    />
+                    <NavIcon
                         Icon={Search}
                         active={isActive('/calendario')}
                         onClick={() => navigate('/calendario')}
@@ -57,10 +86,10 @@ const NavIcon = ({ Icon, active, onClick, danger, tooltip }) => (
         <button
             onClick={onClick}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${active
-                    ? 'bg-red-50 text-red-500 shadow-inner'
-                    : danger
-                        ? 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-                        : 'text-gray-400 hover:text-gray-800 hover:bg-gray-100'
+                ? 'bg-red-50 text-red-500 shadow-inner'
+                : danger
+                    ? 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                    : 'text-gray-400 hover:text-gray-800 hover:bg-gray-100'
                 }`}
         >
             <Icon size={22} strokeWidth={active ? 2.5 : 2} />

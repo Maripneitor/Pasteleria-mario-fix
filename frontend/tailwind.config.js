@@ -4,26 +4,31 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class', // Habilitar modo oscuro por clase
     theme: {
         extend: {
             colors: {
                 bakery: {
-                    cream: '#FDFBF7', // Fondo principal
-                    milk: '#FFFFFF', // Contenedores
-                    accent: '#D4A373', // Dorado/Café suave para destacados
-                    text: '#4A403A', // Texto principal (café oscuro)
-                    muted: '#9C8C74', // Texto secundario
-                    highlight: '#FAEDCD', // Fondos suaves
-                    success: '#CCD5AE', // Verde pastel para éxito
-                    error: '#E6B8A2', // Rojo/Naranja pastel para errores
+                    cream: '#FDF8F1',
+                    chocolate: '#3E2723',
+                    'burnt-wood': '#2A1A10',
+
+                    // Legacy/Existing mappings
+                    milk: '#FFFFFF',
+                    accent: '#D4A373',
+                    muted: '#8D6E63',
+                    success: '#CCD5AE',
+                    error: '#E6B8A2',
                     primary: '#D4A373',
-                    secondary: '#FEFAE0',
-                }
+                    secondary: '#FDF8F1',
+                    text: '#3E2723',
+                    'dark-surface': '#3E2723',
+                    'dark-text': '#FDF8F1',
+                    'torch-fire': '#E65100',
+                },
+                'bakery-burnt-wood': '#2A1A10', // Global alias
+                'torch-fire': '#E65100',        // Global alias for Torch effect
             },
-            fontFamily: {
-                sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                serif: ['Playfair Display', 'ui-serif', 'Georgia', 'serif'],
-            }
         },
     },
     plugins: [],

@@ -1,19 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Estilos globales */
-body {
-  @apply bg-bakery-cream text-bakery-text font-sans antialiased;
-}
+@layer base {
+  body {
+    @apply bg-bakery-cream text-bakery-chocolate transition-colors duration-500 ease-in-out font-sans antialiased;
+    background-image: url('./assets/noise.svg');
+    background-size: 120px;
+    background-blend-mode: multiply;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  @apply font-serif text-bakery-text;
+  /* Torch Mode (Dark) overrides */
+  html.dark body {
+    @apply bg-bakery-burnt-wood text-bakery-cream;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif text-bakery-text;
+  }
 }
 
 /* Scrollbar personalizada */

@@ -1,30 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import DesktopSidebar from './ui/DesktopSidebar';
-import MobileNav from './ui/MobileNav';
-import { useAuth } from '../context/AuthContext';
+import React from 'react';
+import AppNavigation from './AppNavigation';
 
+// Backward compatibility or direct replacement
 const Navigation = () => {
-    const { logout } = useAuth();
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    return (
-        <>
-            {isMobile ? (
-                <MobileNav onLogout={logout} />
-            ) : (
-                <DesktopSidebar onLogout={logout} />
-            )}
-        </>
-    );
+    return <AppNavigation />;
 };
 
 export default Navigation;

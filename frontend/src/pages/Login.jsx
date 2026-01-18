@@ -4,7 +4,10 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import LoginForm from '../components/ui/LoginForm';
 import { motion } from 'framer-motion';
 
+import CakeLoader from '../components/CakeLoader';
+
 const Login = () => {
+    // ... existing state ...
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -21,9 +24,10 @@ const Login = () => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        // Demo delay to show animation (optional for dev, helpful here)
+        // await new Promise(resolve => setTimeout(resolve, 2000)); 
         try {
             await login(email, password);
-            // Navigation handled by router/auth state usually, but explicit here is fine
             navigate('/dashboard');
         } catch (err) {
             console.error(err);
@@ -34,7 +38,8 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 relative">
+            <CakeLoader isLoading={loading} />
             <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -1,0 +1,10 @@
+System Recovery Check
+/Users/marioefrain/Documents/Proyectos/Pasteleria-mario-fix/backend/server/controllers/folioController.js:622
+    }
+    ^
+
+SyntaxError: Missing catch or finally after try
+    at wrapSafe (node:internal/modules/cjs/loader:1692:18)
+    at checkSyntax (node:internal/main/check_syntax:76:3)
+
+Node.js v24.11.1

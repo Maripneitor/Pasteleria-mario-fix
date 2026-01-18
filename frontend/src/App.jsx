@@ -1,53 +1,101 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './pages/Login';
+import { AuthProvider } from './context/AuthContext';
+import { SystemLogProvider } from './context/SystemLogContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastSystem';
+import LogIn from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import DevDashboard from './pages/DevDashboard';
 import Calendar from './pages/Calendar';
 import AiInbox from './pages/AiInbox';
 import Folios from './pages/Folios';
 import NewFolio from './pages/NewFolio';
-// import FolioForm from './components/FolioForm'; // Not a page, used inside NewFolio
+import KanbanBoard from './components/KanbanBoard';
+import Statistics from './pages/Statistics';
+import Inventory from './pages/Inventory';
+import Clients from './pages/Clients';
+import SystemHealth from './pages/SystemHealth';
+import AdminOwnerManagement from './pages/AdminOwnerManagement';
+import AdminGlobalAnalytics from './pages/AdminGlobalAnalytics';
+import OwnerDashboard from './pages/OwnerDashboard';
+import DeveloperDashboard from './pages/DeveloperDashboard';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary';
+import DevOverlay from './components/DevOverlay';
 
-import { ToastProvider } from './context/ToastSystem';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router>
-          <Routes>
-            {/* Public Route */}
-            <Route path="/login" element={<Login />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ThemeProvider>
+          <SystemLogProvider>
+            <ToastProvider>
+              <GlobalErrorBoundary>
+                <Router>
+                  <DevOverlay />
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/login" element={<LogIn />} />
+                    <Route path="/register" element={<Register />} />
 
-            {/* Protected Routes Wrapper */}
-            <Route element={<Layout />}>
-              {/* Dashboard - Accessible by all roles (internal logic handles views) */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-              </Route>
+                    {/* Protected Routes Wrapper */}
+                    <Route element={<Layout />}>
+                      {/* Developer Only Route (Hidden) */}
+                      <Route element={<ProtectedRoute allowedRoles={['Desarrollador']} />}>
+                        <Route path="/dev-dashboard" element={<DevDashboard />} />
+                        <Route path="/dashboard/developer" element={<DeveloperDashboard />} />
+                        <Route path="/system-health" element={<SystemHealth />} />
+                      </Route>
 
-              {/* General Protected Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/calendario" element={<Calendar />} />
-                <Route path="/folios" element={<Folios />} />
-                <Route path="/folio/nuevo" element={<NewFolio />} />
-              </Route>
+                      <Route element={<ProtectedRoute allowedRoles={['Administrador']} />}>
+                        <Route path="/admin/owners" element={<AdminOwnerManagement />} />
+                        <Route path="/admin/global-analytics" element={<AdminGlobalAnalytics />} />
+                      </Route>
 
-              {/* Inbox - Admin/Seller */}
-              <Route element={<ProtectedRoute allowedRoles={['Administrador', 'Vendedor']} />}>
-                <Route path="/bandeja-ia" element={<AiInbox />} />
-              </Route>
-            </Route>
+                      {/* Dashboard - Accessible by all roles (internal logic handles views) */}
+                      <Route element={<ProtectedRoute />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                      </Route>
 
-            {/* Fallback */}
-            <Route path="/" element={<Navigate to="/folios" replace />} />
-            <Route path="*" element={<Navigate to="/folios" replace />} />
-          </Routes>
-        </Router>
-      </ToastProvider>
-    </AuthProvider>
+                      {/* General Protected Routes */}
+                      <Route path="/calendario" element={<Calendar />} />
+                      <Route path="/folios" element={<Folios />} />
+                      <Route path="/folio/nuevo" element={<NewFolio />} />
+                      <Route path="/produccion" element={<KanbanBoard />} />
+                      <Route path="/estadisticas" element={<Statistics />} />
+                      {/* <Route path="/inventario" element={<Inventory />} />  <-- MOVED TO DEV ONLY */}
+                      <Route path="/clientes" element={<Clients />} />
+
+
+                      {/* Inventory - Moved to restricted */}
+                      <Route element={<ProtectedRoute allowedRoles={['Desarrollador']} />}>
+                        <Route path="/inventario" element={<Inventory />} />
+                      </Route>
+
+                      {/* Inbox - Admin/Seller/Owner */}
+                      <Route element={<ProtectedRoute allowedRoles={['Administrador', 'Vendedor', 'Dueño']} />}>
+                        <Route path="/bandeja-ia" element={<AiInbox />} />
+                        <Route path="/dashboard/owner" element={<OwnerDashboard />} />
+                      </Route>
+                    </Route>
+
+                    {/* Fallback */}
+                    <Route path="/" element={<Navigate to="/folios" replace />} />
+                    <Route path="*" element={<Navigate to="/folios" replace />} />
+                  </Routes>
+                </Router>
+              </GlobalErrorBoundary>
+            </ToastProvider>
+          </SystemLogProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </QueryClientProvider >
   );
 }
 
