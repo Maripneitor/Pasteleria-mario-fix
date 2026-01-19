@@ -7,6 +7,11 @@ const Folio = sequelize.define('Folio', {
     allowNull: false,
     unique: true
   },
+  ownerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'ID of the Owner (Tenant) closest to the user who created this folio'
+  },
   folioType: {
     type: DataTypes.STRING, // Se cambia temporalmente a STRING para evitar error de truncado por datos incompatibles
     allowNull: false

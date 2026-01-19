@@ -167,7 +167,8 @@ exports.login = async (req, res) => {
       id: user.id,
       username: user.username,
       role: user.role,
-      ownerId: user.ownerId
+      ownerId: user.ownerId,
+      status: user.status
     };
 
     // --- CORRECCIÓN APLICADA ---

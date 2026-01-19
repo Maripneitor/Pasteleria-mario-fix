@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useState } from 'react';
 
 const ThemeContext = createContext();
 
@@ -14,7 +14,7 @@ export const ThemeProvider = ({ children }) => {
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const root = window.document.documentElement;
         // Apply class immediately
         if (isDark) {

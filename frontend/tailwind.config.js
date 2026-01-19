@@ -26,8 +26,8 @@ export default {
                     'dark-text': '#FDF8F1',
                     'torch-fire': '#E65100',
                 },
-                'bakery-burnt-wood': '#2A1A10', // Global alias
-                'torch-fire': '#E65100',        // Global alias for Torch effect
+                'bakery-burnt-wood': '#2A1A10', // Explicit hyphenated name for Tailwind class generation
+                'torch-fire': '#E65100',
             },
         },
     },

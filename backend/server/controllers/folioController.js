@@ -56,6 +56,19 @@ exports.createFolio = async (req, res) => {
             ...folioData
         } = req.body;
 
+        // --- AUTONOMOUS OWNER ID RESOLUTION ---
+        let finalOwnerId = null;
+        if (req.user) {
+            // Priority 1: User is Owner -> Use their ID
+            if (req.user.role === 'Dueño') {
+                finalOwnerId = req.user.id;
+            }
+            // Priority 2: User is Employee -> Use their ownerId
+            else if (req.user.ownerId) {
+                finalOwnerId = req.user.ownerId;
+            }
+        }
+
         // Validaciones estrictas
         const requiredFields = ['clientName', 'clientPhone', 'deliveryDate', 'total', 'advancePayment'];
         const missingFields = requiredFields.filter(field => !req.body[field] && req.body[field] !== 0);
@@ -171,7 +184,9 @@ exports.createFolio = async (req, res) => {
             complements: complementsData.length > 0 ? complementsData : null,
             isPaid: finalIsPaidStatus, // <= Establecer isPaid basado en el balance real
             hasExtraHeight: hasExtraHeight === 'true' || hasExtraHeight === true,
-            status: status === 'Nuevo' ? 'Nuevo' : (folioData.status || 'Nuevo') // Default a 'Nuevo'
+            hasExtraHeight: hasExtraHeight === 'true' || hasExtraHeight === true,
+            status: status === 'Nuevo' ? 'Nuevo' : (folioData.status || 'Nuevo'), // Default a 'Nuevo'
+            ownerId: finalOwnerId // Persist Tenant ID
         };
 
         // Crear el folio DENTRO de la transacción
@@ -238,11 +253,13 @@ exports.createFolio = async (req, res) => {
 };
 
 // --- OBTENER TODOS los folios ---
+// --- OBTENER TODOS los folios ---
 exports.getAllFolios = async (req, res) => {
     try {
         const { q, status } = req.query;
         let whereClause = {};
 
+        // 1. Filtro de Búsqueda (Search)
         if (q) {
             const searchTerm = `%${q}%`;
             whereClause = {
@@ -255,6 +272,7 @@ exports.getAllFolios = async (req, res) => {
             };
         }
 
+        // 2. Filtro de Estado
         if (status) {
             whereClause.status = status;
         } else {
@@ -262,36 +280,26 @@ exports.getAllFolios = async (req, res) => {
             whereClause.status = { [Op.ne]: 'Pendiente' };
         }
 
-        // --- MULTI-TENANCY FILTER ---
+        // 3. SEGURIDAD & SEGREGACIÓN (Multi-Tenancy)
         const user = req.user;
 
-        // Si NO es administrador, aplicar filtro estricto por ownerId
+        // "El Dueño A nunca debe tener acceso a los datos del Dueño B"
         if (user.role !== 'Administrador') {
             let rootOwnerId = null;
 
+            // Determinar quién es el "Dueño Raíz" de este usuario
             if (user.role === 'Dueño') {
                 rootOwnerId = user.id;
             } else {
-                // Empleado u otro rol
+                // Empleado, Vendedor, etc.
                 rootOwnerId = user.ownerId;
             }
 
             if (rootOwnerId) {
-                // Buscar todos los usuarios que pertenecen a este Dueño
-                const branchUsers = await User.findAll({
-                    where: {
-                        [Op.or]: [
-                            { id: rootOwnerId },
-                            { ownerId: rootOwnerId }
-                        ]
-                    },
-                    attributes: ['id']
-                });
-
-                const allowedIds = branchUsers.map(u => u.id);
-                whereClause.responsibleUserId = { [Op.in]: allowedIds };
+                // Nuevo Filtro Directo: Solo folios que pertenezcan a este Dueño
+                whereClause.ownerId = rootOwnerId;
             } else {
-                // Fallback: solo propios
+                // Fallback de seguridad: Si no hay ownerId (ej. usuario huérfano), solo ver sus propios folios.
                 whereClause.responsibleUserId = user.id;
             }
         }
@@ -304,11 +312,12 @@ exports.getAllFolios = async (req, res) => {
             ],
             order: status === 'Pendiente' ? [['createdAt', 'DESC']] : [['deliveryDate', 'ASC'], ['deliveryTime', 'ASC']]
         });
+
         res.status(200).json(folios);
 
-    } catch (error) { // Catch block correctly linked
-        console.error("Error en getAllFolios:", error);
-        res.status(500).json({ message: 'Error al obtener los folios', error: error.message });
+    } catch (error) {
+        console.error("❌ Error CRÍTICO en getAllFolios:", error);
+        res.status(500).json({ message: 'Error interno del servidor al obtener folios.', error: error.message });
     }
 };
 
@@ -610,23 +619,31 @@ exports.generateFolioPdf = async (req, res) => {
         // Lógica de "Sello del Dueño"
         // -----------------------------------------------------
         let customSealUrl = null;
-        if (folio.responsibleUser) {
-            // Si el usuario es dueño directo
-            if (folio.responsibleUser.ownerSeal) {
-                customSealUrl = folio.responsibleUser.ownerSeal;
-            }
-            // Si el usuario es empleado, buscar el sello de su dueño (ownerId)
-            else if (folio.responsibleUser.ownerId) {
-                const ownerUser = await User.findByPk(folio.responsibleUser.ownerId, { attributes: ['ownerSeal'] });
-                if (ownerUser && ownerUser.ownerSeal) {
-                    customSealUrl = ownerUser.ownerSeal;
+        try {
+            if (folio.responsibleUser) {
+                // 1. Si el usuario responsable ya tiene el sello (es Dueño)
+                if (folio.responsibleUser.ownerSeal) {
+                    customSealUrl = folio.responsibleUser.ownerSeal;
+                }
+                // 2. Si el usuario es empleado (tiene ownerId), buscar a su Dueño
+                else if (folio.responsibleUser.ownerId) {
+                    const ownerUser = await User.findByPk(folio.responsibleUser.ownerId, { attributes: ['ownerSeal'] });
+                    if (ownerUser && ownerUser.ownerSeal) {
+                        customSealUrl = ownerUser.ownerSeal;
+                    }
                 }
             }
+        } catch (sealErr) {
+            console.error("Error buscando sello de dueño:", sealErr);
+            // Fallback implícito: customSealUrl se queda en null
         }
-        // Fallback: Si no hay sello personalizado, usar null (el template manejará el logo por defecto)
-        // O si se requiere un "default explícito" por variable de entorno o constante:
-        // customSealUrl = customSealUrl || 'https://ruta-a-sello-default.png'; 
+
+        // Asignar al objeto de datos. 
+        // Si es null, el template de pdfService debe mostrar el logo genérico.
         folioDataForPdf.ownerSeal = customSealUrl;
+
+        // Log para depuración
+        console.log(`🏷️ Sello detectado para PDF: ${customSealUrl ? 'Personalizado' : 'Genérico (Pastelería Mario)'}`);
         // -----------------------------------------------------
 
         // -----------------------------------------------------
@@ -729,6 +746,7 @@ exports.generateFolioPdf = async (req, res) => {
                     return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
                 } catch (err) {
                     console.error(`❌ Error leyendo imagen para PDF (${url}):`, err.message);
+                    // Retornar un placeholder o null para que el filtro lo elimine
                     return null;
                 }
             }));
@@ -743,6 +761,7 @@ exports.generateFolioPdf = async (req, res) => {
         // Generación y Envío del PDF (vía URL)
         const pdfUrl = await pdfService.createPdf(folioDataForPdf);
         console.log(`✅ PDF generado y disponible en: ${pdfUrl}`);
+        console.log("✅ Integridad de Datos Blindada");
 
         // Devolver la URL al cliente
         res.status(200).json({ url: pdfUrl });

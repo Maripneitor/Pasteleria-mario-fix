@@ -69,11 +69,10 @@ function App() {
                       <Route path="/folio/nuevo" element={<NewFolio />} />
                       <Route path="/produccion" element={<KanbanBoard />} />
                       <Route path="/estadisticas" element={<Statistics />} />
-                      {/* <Route path="/inventario" element={<Inventory />} />  <-- MOVED TO DEV ONLY */}
                       <Route path="/clientes" element={<Clients />} />
 
 
-                      {/* Inventory - Moved to restricted */}
+                      {/* Inventory - Restricted */}
                       <Route element={<ProtectedRoute allowedRoles={['Desarrollador']} />}>
                         <Route path="/inventario" element={<Inventory />} />
                       </Route>
@@ -95,7 +94,7 @@ function App() {
           </SystemLogProvider>
         </ThemeProvider>
       </AuthProvider>
-    </QueryClientProvider >
+    </QueryClientProvider>
   );
 }
 

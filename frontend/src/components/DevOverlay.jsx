@@ -1,147 +1,130 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSystemLog } from '../context/SystemLogContext';
-import { Terminal, X, Activity, Database, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, Activity, AlertCircle, X, Server } from 'lucide-react';
+import api from '../services/api';
 
 const DevOverlay = () => {
-    const { user } = useAuth();
+    const { user, debugLogin } = useAuth();
     const { logs } = useSystemLog();
     const [isOpen, setIsOpen] = useState(false);
-    const [stats, setStats] = useState({
-        memory: 0,
-        fps: 0
-    });
+    const [latency, setLatency] = useState(0);
 
-    // Only render for Developer role
-    // Assuming role string is strictly 'Desarrollador' based on request, 
-    // or we might check for 'admin' if that is the tech role. 
-    // I'll stick to 'Desarrollador' as requested.
+    // Only show for Developer
     if (!user || user.role !== 'Desarrollador') return null;
 
     useEffect(() => {
-        let frameCount = 0;
-        let lastTime = performance.now();
-
-        const updateStats = () => {
-            const now = performance.now();
-            frameCount++;
-
-            if (now - lastTime >= 1000) {
-                setStats(prev => ({
-                    ...prev,
-                    fps: frameCount
-                }));
-                frameCount = 0;
-                lastTime = now;
+        const checkLatency = async () => {
+            const start = Date.now();
+            try {
+                await api.get('/'); // Simple health check or root
+                const end = Date.now();
+                setLatency(end - start);
+            } catch (e) {
+                setLatency(-1);
             }
-
-            if (performance.memory) {
-                setStats(prev => ({
-                    ...prev,
-                    memory: Math.round(performance.memory.usedJSHeapSize / 1048576)
-                }));
-            }
-
-            requestAnimationFrame(updateStats);
         };
 
-        const animationId = requestAnimationFrame(updateStats);
-        return () => cancelAnimationFrame(animationId);
+        const interval = setInterval(checkLatency, 5000);
+        checkLatency();
+        return () => clearInterval(interval);
     }, []);
 
-    // Filter "ERROR" logs from the system log context
-    // We want specifically those captured by GlobalErrorBoundary or critical system errors
-    const recentErrors = logs.filter(log =>
-        (log.level === 'ERROR' || log.level === 'error')
-    ).slice(0, 3); // Limit to last 3
+    const errors = logs.filter(l => l.level === 'ERROR' || l.level === 'warn').slice(0, 3);
 
-    const displayLogs = recentErrors.length > 0 ? recentErrors : [];
-
-    if (!isOpen) {
-        return (
-            <button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-4 left-4 z-50 bg-black/80 text-green-400 p-3 rounded-full shadow-lg border border-green-900 hover:scale-110 transition-transform font-mono text-xs flex items-center gap-2 group"
-                title="Ojo de Dios"
-            >
-                <Terminal size={18} />
-                <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap">Dev Console</span>
-            </button>
-        );
-    }
-
-    // Adjusted styling for responsiveness:
-    // Mobile: Top-Right (less obtrusive than bottom-left which might overlap with fab/nav)
-    // Desktop: Bottom-Left
     return (
-        <div className="fixed top-4 right-4 md:top-auto md:right-auto md:bottom-4 md:left-4 z-[9999] w-72 md:w-80 bg-black/95 text-green-400 font-mono text-xs rounded-lg shadow-2xl border border-green-900 overflow-hidden backdrop-blur-sm transition-all">
-            {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b border-green-900 bg-green-900/10">
-                <div className="flex items-center gap-2 font-bold">
-                    <Activity size={14} />
-                    <span>OJO DE DIOS</span>
-                </div>
-                <button onClick={() => setIsOpen(false)} className="hover:text-white transition-colors">
-                    <X size={14} />
-                </button>
-            </div>
-
-            {/* Performance Stats */}
-            <div className="p-3 grid grid-cols-2 gap-2 border-b border-green-900/50">
-                <div className="flex flex-col gap-1">
-                    <span className="text-gray-500">MEM HEAP</span>
-                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-green-500 transition-all duration-300"
-                            style={{ width: `${Math.min((stats.memory / 200) * 100, 100)}%` }} // Assuming 200MB baseline scale
-                        />
-                    </div>
-                    <span className="text-right">{stats.memory} MB</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span className="text-gray-500">FPS</span>
-                    <span className="text-xl font-bold text-white">{stats.fps}</span>
-                </div>
-            </div>
-
-            {/* SQL Errors */}
-            <div className="p-3">
-                <div className="flex items-center gap-2 mb-2 text-gray-400">
-                    <Database size={12} />
-                    <span>LATEST SYSTEM ERRORS</span>
-                </div>
-
-                <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                    {displayLogs.length === 0 ? (
-                        <div className="text-gray-600 italic py-2 text-center border border-dashed border-gray-800 rounded">
-                            No captured SQL errors
-                        </div>
-                    ) : (
-                        displayLogs.map((log, i) => (
-                            <div key={i} className="bg-red-900/10 border border-red-900/30 p-2 rounded text-red-300">
-                                <div className="flex items-center gap-1 mb-1 font-bold text-[10px] text-red-500">
-                                    <AlertCircle size={10} />
-                                    {new Date(log.timestamp).toLocaleTimeString()}
-                                </div>
-                                <div className="break-all">
-                                    {log.message}
-                                </div>
+        <div className="fixed bottom-4 right-4 z-[9999] font-mono text-xs">
+            <AnimatePresence>
+                {isOpen ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="bg-black/90 text-green-400 p-4 rounded-xl border border-green-800 shadow-2xl w-80 backdrop-blur-md"
+                    >
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-2 text-green-300 font-bold uppercase tracking-wider">
+                                <Eye size={14} /> Ojo de Dios
                             </div>
-                        ))
-                    )}
-                </div>
-            </div>
+                            <button onClick={() => setIsOpen(false)} className="hover:text-white transition-colors"><X size={14} /></button>
+                        </div>
 
-            {/* Command Input Placeholder */}
-            <div className="bg-black p-2 border-t border-green-900 flex gap-2">
-                <span className="text-green-600">{'>'}</span>
-                <input
-                    type="text"
-                    placeholder="Execute system call..."
-                    className="bg-transparent border-none outline-none text-white w-full placeholder-green-900"
-                    disabled
-                />
-            </div>
+                        {/* Metrics */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center bg-green-900/20 p-2 rounded">
+                                <div className="flex items-center gap-2">
+                                    <Activity size={14} />
+                                    <span>Memoria (Heap)</span>
+                                </div>
+                                <span className="text-green-400">
+                                    {window.performance?.memory ? `${Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024)} MB` : 'N/A'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center bg-green-900/20 p-2 rounded">
+                                <div className="flex items-center gap-2">
+                                    <Server size={14} />
+                                    <span>API Latency</span>
+                                </div>
+                                <span className={latency > 200 ? 'text-red-400' : 'text-green-400'}>
+                                    {latency >= 0 ? `${latency}ms` : 'OFFLINE'}
+                                </span>
+                                <span className={latency > 200 ? 'text-red-400' : 'text-green-400'}>
+                                    {latency >= 0 ? `${latency}ms` : 'OFFLINE'}
+                                </span>
+                            </div>
+
+                            {/* AUTH STATUS */}
+                            <div className="bg-green-900/10 p-2 rounded border border-green-900/30">
+                                <div className="text-green-500 font-bold mb-1 border-b border-green-900/50">AUTH STATUS</div>
+                                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                    <div>Token: <span className={localStorage.getItem('token') ? "text-green-400" : "text-red-500"}>{localStorage.getItem('token') ? "PRESENT" : "MISSING"}</span></div>
+                                    <div>Role: <span className="text-white">{user?.role || "N/A"}</span></div>
+                                    <div>OwnerID: <span className="text-white">{user?.ownerId || "Root"}</span></div>
+                                    <div>Status: <span className={user?.status === 'active' ? "text-green-400" : "text-yellow-400"}>{user?.status || "N/A"}</span></div>
+                                </div>
+                                {import.meta.env.DEV && !user && (
+                                    <button
+                                        onClick={() => debugLogin()}
+                                        className="mt-2 w-full bg-green-900 hover:bg-green-800 text-green-100 py-1 rounded text-[10px] uppercase font-bold transition-colors"
+                                    >
+                                        Force Login Dev
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="bg-green-900/10 p-2 rounded max-h-40 overflow-y-auto">
+                                <div className="flex items-center gap-2 text-green-600 mb-2 border-b border-green-900/30 pb-1">
+                                    <AlertCircle size={12} />
+                                    <span>Últimos Errores (SQL/Sys)</span>
+                                </div>
+                                {errors.length === 0 ? (
+                                    <div className="text-gray-500 italic py-2">Sistema nominal. Sin errores.</div>
+                                ) : (
+                                    errors.map((log) => (
+                                        <div key={log.id} className="mb-2 last:mb-0 border-l-2 border-red-500 pl-2">
+                                            <div className="text-white font-bold">{log.message}</div>
+                                            <div className="text-gray-400 text-[10px]">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mt-2 text-[10px] text-green-900/50 text-center uppercase tracking-[0.2em]">
+                            System Integrity Active
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.button
+                        layoutId="god-eye-trigger"
+                        onClick={() => setIsOpen(true)}
+                        className="bg-black text-green-500 p-3 rounded-full shadow-lg border border-green-900/50 hover:bg-green-900/20 transition-all hover:scale-110 group"
+                    >
+                        <Eye size={20} className="group-hover:animate-pulse" />
+                    </motion.button>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

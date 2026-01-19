@@ -14,7 +14,7 @@ const authRoutes = require('./server/routes/authRoutes');
 const folioRoutes = require('./server/routes/folioRoutes');
 const userRoutes = require('./server/routes/userRoutes');
 const clientRoutes = require('./server/routes/clientRoutes');
-// const whatsappRoutes = require('./server/routes/whatsappRoutes'); // <-- RUTA NUEVA
+const whatsappRoutes = require('./server/routes/whatsappRoutes'); // <-- RUTA NUEVA
 const dashboardRoutes = require('./server/routes/dashboardRoutes');
 const aiSessionRoutes = require('./server/routes/aiSessionRoutes');
 const testRoutes = require('./server/routes/testRoutes');
@@ -69,7 +69,7 @@ app.use('/api/ingredients', ingredientRoutes);
 
 // --- INICIO DEL SERVIDOR ---
 sequelize.sync({ alter: true }).then(async () => {
-  console.log('✅ Base de datos sincronizada y robusta');
+  console.log('✅ Base de datos sincronizada y robusta.');
   console.log('🔄 Modelos sincronizados con la base de datos.');
 
   // --- MIGRACIÓN FORZADA DE COLUMNAS ---
@@ -132,8 +132,19 @@ sequelize.sync({ alter: true }).then(async () => {
   // -------------------------------------
 
   await ingredientController.seedIngredients();
+
+  // Keep Alive Logic for Stability
+  process.on('uncaughtException', (err) => {
+    console.error('🔥 UNCAUGHT PREVENTED:', err);
+    // Not exiting process to keep server alive during minor glitches
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚫 UNHANDLED REJECTION:', reason);
+  });
+
   app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor escuchando en puerto ${PORT} y DB sincronizada`);
   });
 }).catch(error => {
   console.error('❌ Error al sincronizar con la base de datos:', error);

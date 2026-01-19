@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { Plus, Calendar, User, DollarSign, X, Cake, Flame } from 'lucide-react';
@@ -20,6 +21,7 @@ const Folios = () => {
     const [signingFolio, setSigningFolio] = useState(null); // Folio being signed
     const [selectedFolio, setSelectedFolio] = useState(null); // Folio for Details
 
+    const { user } = useAuth();
     // Form State
     const [formData, setFormData] = useState({
         clientName: '',
@@ -47,8 +49,10 @@ const Folios = () => {
     };
 
     useEffect(() => {
-        fetchFolios();
-    }, []);
+        if (user) {
+            fetchFolios();
+        }
+    }, [user]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -222,7 +226,7 @@ const Folios = () => {
                                 className={`relative rounded-2xl transition-all duration-500 cursor-pointer
                                     ${isFocusMode
                                         ? (isUrgent
-                                            ? 'scale-105 z-30 shadow-[0_0_60px_rgba(251,191,36,0.5)] ring-4 ring-orange-500/60'
+                                            ? 'scale-105 z-30 animate-pulse shadow-[0_0_15px_#D4A373] ring-4 ring-orange-500/60'
                                             : 'scale-90 opacity-10 blur-[3px] grayscale brightness-50 pointer-events-none')
                                         : 'scale-100 opacity-100'
                                     }

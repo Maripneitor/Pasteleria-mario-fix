@@ -14,8 +14,10 @@
   }
 
   /* Torch Mode (Dark) overrides */
-  html.dark body {
-    @apply bg-bakery-burnt-wood text-bakery-cream;
+  @layer base {
+    html.dark body {
+      @apply bg-bakery-burnt-wood text-bakery-cream;
+    }
   }
 
   h1,
