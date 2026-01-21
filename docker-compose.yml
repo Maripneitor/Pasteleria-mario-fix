@@ -2,7 +2,7 @@ services:
   db:
     image: mysql:8.0
     container_name: mysql_pasteleria
-    # Esto soluciona el error de "Access Denied" en Mac
+    # Soluciona problemas de autenticación en algunas versiones de clientes MySQL
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -12,7 +12,38 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Montamos el script SQL inicial si es necesario para poblar la DB en el primer arranque
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    container_name: backend_pasteleria
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    # Cargamos .env si existe para secretos (JWT, EMAIL, etc)
+    env_file:
+      - ./backend/.env
+    # Sobrescribimos variables de DB para conectar entre contenedores
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=root_password
+      - DB_NAME=pasteleria_db
+      - DB_PORT=3306
+    volumes:
+      # Persistencia de uploads
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    container_name: frontend_pasteleria
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
 
 volumes:
   db_data:
+  backend_uploads:
