@@ -98,6 +98,54 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+// ACTUALIZAR rol, estatus y dueño (Solo Admin)
+exports.updateUserRole = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { role, status, ownerId } = req.body;
+
+    // Validación estricta de Admin
+    if (req.user.role !== 'Administrador') {
+      return res.status(403).json({ message: 'Acceso denegado. Se requieren permisos de Administrador.' });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    // Evitar que el admin se bloquee a sí mismo o se quite el admin si es el único (opcional, pero buena práctica)
+    // Por ahora solo evitamos que se quite el rol de Admin a sí mismo, aunque la UI lo permita, el backend protege
+    if (req.user.id == userId) {
+      if (role && role !== 'Administrador') {
+        return res.status(403).json({ message: 'No puedes quitarte tu propio rol de administrador.' });
+      }
+      if (status && status === 'banned') {
+        return res.status(403).json({ message: 'No puedes bloquear tu propia cuenta.' });
+      }
+    }
+
+    if (role) user.role = role;
+    if (status) user.status = status;
+
+    // Asignación de Owner
+    if (ownerId !== undefined) {
+      // Si se pasa null, se desvincula. Si se pasa un ID, se vincula.
+      // Podríamos validar que el ownerId exista y sea rol 'Dueño', pero por agilidad confiamos en el input del Admin o ForeignKeys (si las hubiera estrictas)
+      user.ownerId = ownerId;
+    }
+
+    await user.save();
+
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+
+    res.status(200).json({ message: 'Rol y estatus actualizados correctamente.', user: userResponse });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar el rol del usuario.', error: error.message });
+  }
+};
+
 // ELIMINAR un usuario
 exports.deleteUser = async (req, res) => {
   try {

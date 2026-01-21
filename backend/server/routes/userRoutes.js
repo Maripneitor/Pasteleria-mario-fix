@@ -17,4 +17,7 @@ router.route('/:id')
     .put(userController.updateUser)
     .delete(userController.deleteUser);
 
+// Ruta específica para cambio de rol/estatus por Admin
+router.put('/update-role/:id', userController.updateUserRole);
+
 module.exports = router;

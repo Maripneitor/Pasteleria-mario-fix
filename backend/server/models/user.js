@@ -46,10 +46,10 @@ const User = sequelize.define('User', {
     comment: 'URL or base64 of the custom seal for folios'
   },
   status: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM('active', 'pending_verification', 'banned'),
     allowNull: false,
     defaultValue: 'active',
-    comment: 'active, pending_verification, suspended'
+    comment: 'Status: active, pending_verification, banned'
   },
   permissions: {
     type: DataTypes.JSON,

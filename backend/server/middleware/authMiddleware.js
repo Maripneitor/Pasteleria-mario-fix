@@ -15,7 +15,7 @@ module.exports = function (req, res, next) {
 
   // 3. Si no se encuentra un token en ninguno de los dos lugares, denegamos el acceso.
   if (!token) {
-    return res.status(401).json({ message: 'Acceso denegado. No se proporcionó un token.' });
+    return res.status(401).json({ code: "AUTH_REQUIRED", message: 'Acceso denegado. No se proporcionó un token.' });
   }
 
   // LOG PARA DEPURAR EL OJO DE DIOS
@@ -31,7 +31,16 @@ module.exports = function (req, res, next) {
     // 6. Permitimos que la petición continúe hacia el controlador correspondiente.
     next();
   } catch (error) {
-    // Si la verificación falla (token inválido o expirado), devolvemos un error.
-    res.status(401).json({ message: 'Token no válido.' });
+    // Si la verificación falla (token inválido o expirado), devolvemos un error específico.
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ code: "AUTH_REQUIRED", message: "Sesión expirada" });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ code: "AUTH_REQUIRED", message: "Token no válido" });
+    }
+
+    // Fallback error
+    // Fallback error
+    console.error("Error validando token:", error);
+    res.status(401).json({ code: "AUTH_REQUIRED", message: 'Sesión inválida o token corrupto.' });
   }
 };

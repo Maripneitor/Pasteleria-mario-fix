@@ -13,11 +13,11 @@ import Folios from './pages/Folios';
 import NewFolio from './pages/NewFolio';
 import KanbanBoard from './components/KanbanBoard';
 import Statistics from './pages/Statistics';
-import Inventory from './pages/Inventory';
 import Clients from './pages/Clients';
 import SystemHealth from './pages/SystemHealth';
 import AdminOwnerManagement from './pages/AdminOwnerManagement';
 import AdminGlobalAnalytics from './pages/AdminGlobalAnalytics';
+import AdminUserManagement from './pages/AdminUserManagement'; // Importación nueva
 import OwnerDashboard from './pages/OwnerDashboard';
 import DeveloperDashboard from './pages/DeveloperDashboard';
 import Layout from './components/Layout';
@@ -56,6 +56,7 @@ function App() {
                       <Route element={<ProtectedRoute allowedRoles={['Administrador']} />}>
                         <Route path="/admin/owners" element={<AdminOwnerManagement />} />
                         <Route path="/admin/global-analytics" element={<AdminGlobalAnalytics />} />
+                        <Route path="/admin/users" element={<AdminUserManagement />} />
                       </Route>
 
                       {/* Dashboard - Accessible by all roles (internal logic handles views) */}
@@ -72,10 +73,7 @@ function App() {
                       <Route path="/clientes" element={<Clients />} />
 
 
-                      {/* Inventory - Restricted */}
-                      <Route element={<ProtectedRoute allowedRoles={['Desarrollador']} />}>
-                        <Route path="/inventario" element={<Inventory />} />
-                      </Route>
+
 
                       {/* Inbox - Admin/Seller/Owner */}
                       <Route element={<ProtectedRoute allowedRoles={['Administrador', 'Vendedor', 'Dueño']} />}>

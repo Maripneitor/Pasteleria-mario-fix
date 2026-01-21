@@ -46,7 +46,11 @@ const Register = () => {
             await register(formData);
             navigate('/login');
         } catch (err) {
-            setError(err.response?.data?.message || 'Error al registrarse');
+            if (err.response && err.response.status === 409) {
+                setError("Este correo ya está registrado en el libro de la pastelería.");
+            } else {
+                setError(err.response?.data?.message || 'Error al registrarse');
+            }
         } finally {
             setLoading(false);
         }
@@ -75,8 +79,9 @@ const Register = () => {
                     </div>
 
                     {error && (
-                        <div className="bg-[#FFE5E5] text-[#D32F2F] text-sm p-3 rounded-lg mb-6 flex items-center gap-2 border border-[#FFCDD2]">
-                            <span className="font-bold">Error:</span> {error}
+                        <div className="bg-[#3E2723] text-[#EFEBE9] text-sm p-4 rounded-lg mb-6 flex items-center gap-3 border-2 border-[#D7CCC8] shadow-md font-serif" style={{ borderStyle: 'dashed' }}>
+                            <span className="text-xl">⚠️</span>
+                            <span>{error}</span>
                         </div>
                     )}
 

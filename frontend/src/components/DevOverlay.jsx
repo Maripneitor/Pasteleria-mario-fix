@@ -74,19 +74,57 @@ const DevOverlay = () => {
                                 </span>
                             </div>
 
-                            {/* AUTH STATUS */}
-                            <div className="bg-green-900/10 p-2 rounded border border-green-900/30">
-                                <div className="text-green-500 font-bold mb-1 border-b border-green-900/50">AUTH STATUS</div>
+                            {/* AUTH DEBUGGER */}
+                            <div className="bg-orange-900/10 p-2 rounded border border-orange-900/30">
+                                <div className="text-orange-500 font-bold mb-1 border-b border-orange-900/50 flex justify-between items-center">
+                                    <span>AUTH DEBUGGER</span>
+                                    <span className="text-[9px] bg-orange-900/50 px-1 rounded">SECURE</span>
+                                </div>
                                 <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                    <div>Token: <span className={localStorage.getItem('token') ? "text-green-400" : "text-red-500"}>{localStorage.getItem('token') ? "PRESENT" : "MISSING"}</span></div>
+                                    <div className="col-span-2">
+                                        <span className="text-gray-400">Último Email:</span>
+                                        <div className="text-white font-mono truncate">
+                                            {sessionStorage.getItem('debug_last_auth_email') || 'N/A'}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span className="text-gray-400">Token Status:</span>
+                                        <div className={localStorage.getItem('token') && localStorage.getItem('token').split('.').length === 3 ? "text-green-400" : "text-red-500"}>
+                                            {localStorage.getItem('token')
+                                                ? (localStorage.getItem('token').split('.').length === 3 ? "VALID (FMT)" : "CORRUPT")
+                                                : "MISSING"}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span className="text-gray-400">Server Last Code:</span>
+                                        <div className="text-orange-300 font-bold">
+                                            {logs.find(l => l.level === 'ERROR' && l.message.includes('API'))?.data?.status || 'N/A'}
+                                        </div>
+                                    </div>
+
                                     <div>Role: <span className="text-white">{user?.role || "N/A"}</span></div>
-                                    <div>OwnerID: <span className="text-white">{user?.ownerId || "Root"}</span></div>
                                     <div>Status: <span className={user?.status === 'active' ? "text-green-400" : "text-yellow-400"}>{user?.status || "N/A"}</span></div>
                                 </div>
+
+                                <button
+                                    onClick={() => {
+                                        localStorage.removeItem('token');
+                                        localStorage.removeItem('user');
+                                        sessionStorage.clear();
+                                        delete api.defaults.headers.common['Authorization'];
+                                        window.location.href = '/login';
+                                    }}
+                                    className="mt-2 w-full bg-red-900/80 hover:bg-red-800 text-white py-1 rounded text-[10px] uppercase font-bold transition-colors border border-red-700"
+                                >
+                                    Limpiar Sesión Forzada
+                                </button>
+
                                 {import.meta.env.DEV && !user && (
                                     <button
                                         onClick={() => debugLogin()}
-                                        className="mt-2 w-full bg-green-900 hover:bg-green-800 text-green-100 py-1 rounded text-[10px] uppercase font-bold transition-colors"
+                                        className="mt-1 w-full bg-green-900 hover:bg-green-800 text-green-100 py-1 rounded text-[10px] uppercase font-bold transition-colors"
                                     >
                                         Force Login Dev
                                     </button>

@@ -26,7 +26,6 @@ const NAV_ITEMS = [
     { name: 'Calendario', path: '/calendario', icon: Calendar },
     { name: 'Producción', path: '/produccion', icon: Trello },
     { name: 'Estadísticas', path: '/estadisticas', icon: BarChart2 },
-    { name: 'Inventario', path: '/inventario', icon: Package },
     { name: 'Clientes', path: '/clientes', icon: Users },
 ];
 
@@ -39,11 +38,26 @@ const AppNavigation = () => {
 
     // Filter items based on role if needed (Owner/Dev extras)
     const filteredItems = [...NAV_ITEMS];
+
     if (user?.role === 'Desarrollador') {
         filteredItems.push({ name: 'Dev Console', path: '/dev-dashboard', icon: Code });
     }
+
+    if (user?.role === 'Administrador' || user?.role === 'Desarrollador') {
+        filteredItems.push({ name: 'Analítica Global', path: '/admin/global-analytics', icon: BarChart2 });
+        filteredItems.push({ name: 'Registro Usuarios', path: '/admin/users', icon: Users });
+    }
+
     if (user?.role === 'Dueño' || user?.role === 'Administrador' || user?.role === 'Vendedor') {
         filteredItems.push({ name: 'Bandeja IA', path: '/bandeja-ia', icon: Mail });
+    }
+
+    if (user?.role === 'Administrador') {
+        filteredItems.push({ name: 'Dueños', path: '/admin/owners', icon: Users });
+    }
+
+    if (user?.role === 'Administrador') {
+        filteredItems.push({ name: 'Dueños', path: '/admin/owners', icon: Users });
     }
 
     // Role display Badge

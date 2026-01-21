@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useInventory } from '../hooks/useInventory';
-import ChalkAlert from '../components/dashboard/ChalkAlert';
 import ChalkMetricsBoard from '../components/dashboard/ChalkMetricsBoard';
 import Navigation from '../components/Navigation';
 import RegisterEmployeeModal from '../components/dashboard/RegisterEmployeeModal';
@@ -14,45 +12,17 @@ const OwnerDashboard = () => {
     const [showCashClose, setShowCashClose] = useState(false);
     const [showSealConfig, setShowSealConfig] = useState(false);
 
-    // Sync Inventory Data
-    const { data: inventory, isLoading } = useInventory();
-
-    // Filter alerts
-    const alerts = inventory ? inventory.filter(item => item.status !== 'ok') : [];
-
     return (
         <div className="min-h-screen bg-bakery-cream font-sans flex text-gray-800">
-            <Navigation />
-
-            <main className="flex-1 w-full max-w-7xl px-8 py-10 md:ml-20">
+            <main className="flex-1 w-full max-w-7xl px-8 py-10">
                 <header className="mb-8">
                     <h1 className="text-3xl font-serif font-bold text-bakery-text">Panel del Dueño</h1>
-                    <p className="text-gray-500">Resumen ejecutivo y alertas de stock.</p>
+                    <p className="text-gray-500">Resumen ejecutivo.</p>
                 </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-                    {/* Alerts Column */}
-                    <div className="lg:col-span-1 space-y-4">
-                        <h2 className="font-bold text-gray-700 tracking-wider uppercase text-sm mb-2">Alertas de Abasto</h2>
-                        {isLoading && <div className="text-sm text-gray-400">Analizando inventario...</div>}
-
-                        {!isLoading && alerts.length === 0 && (
-                            <div className="bg-green-50 p-4 rounded-xl border border-green-200 text-green-700 text-sm">
-                                ✅ Todo el inventario está en orden.
-                            </div>
-                        )}
-
-                        {alerts.map(item => (
-                            <ChalkAlert
-                                key={item.id}
-                                type={item.status}
-                                message={`Stock bajo de ${item.name}. Disponible: ${item.availableStock.toFixed(1)}${item.unit}. (Mínimo: ${item.minLevel})`}
-                            />
-                        ))}
-                    </div>
-
-                    {/* Financial/Metrics Area */}
-                    <div className="lg:col-span-2">
+                <div className="mb-10">
+                    {/* Financial/Metrics Area - Expanded */}
+                    <div className="w-full">
                         <h2 className="font-bold text-gray-700 tracking-wider uppercase text-sm mb-2">Finanzas Semanales</h2>
                         <ChalkMetricsBoard
                             salesData={[

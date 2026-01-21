@@ -21,6 +21,7 @@ const testRoutes = require('./server/routes/testRoutes');
 const dictationRoutes = require('./server/routes/dictationRoutes');
 const ingredientRoutes = require('./server/routes/ingredientRoutes');
 const ingredientController = require('./server/controllers/ingredientController');
+const createDevUser = require('./scripts/create-dev-user');
 
 // --- TAREAS PROGRAMADAS ---
 // Esta línea importa e inicia las tareas programadas (como el envío de correos)
@@ -131,6 +132,9 @@ sequelize.sync({ alter: true }).then(async () => {
   }
   // -------------------------------------
 
+  // -------------------------------------
+
+  await createDevUser();
   await ingredientController.seedIngredients();
 
   // Keep Alive Logic for Stability

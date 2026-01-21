@@ -30,6 +30,17 @@ export const SystemLogProvider = ({ children }) => {
 
     const clearLogs = useCallback(() => setLogs([]), []);
 
+    // Escuchar eventos desde fuera de React (ej. api.js interceptors)
+    React.useEffect(() => {
+        const handleSystemLog = (event) => {
+            const { level, message, data } = event.detail;
+            addLog(level, message, data);
+        };
+
+        window.addEventListener('system-log-event', handleSystemLog);
+        return () => window.removeEventListener('system-log-event', handleSystemLog);
+    }, [addLog]);
+
     return (
         <SystemLogContext.Provider value={{ logs, aiStats, addLog, trackAiScan, clearLogs }}>
             {children}

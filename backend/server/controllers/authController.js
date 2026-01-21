@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const emailService = require('../services/emailService');
 
 // Función para REGISTRAR un nuevo usuario
+// Función para REGISTRAR un nuevo usuario
+// Función para REGISTRAR un nuevo usuario
 exports.register = async (req, res) => {
   try {
     const { username, email, password, role, secretKey } = req.body;
@@ -11,7 +13,7 @@ exports.register = async (req, res) => {
     let assignedRole = 'Empleado'; // Default to Employee
     let status = 'active';
 
-    // 1. Validaciones
+    // 1. Validaciones básicas
     if (!username || !email || !password) {
       return res.status(400).json({ message: "Todos los campos son obligatorios." });
     }
@@ -20,7 +22,13 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "La contraseña debe tener al menos 6 caracteres." });
     }
 
-    // --- LOGICA DE ROLES Y MULTI-TENANCY ---
+    // 2. Verificar duplicados (Antes de cualquier lógica compleja)
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ message: 'El email ya está registrado.' }); // 409 Conflict
+    }
+
+    // 3. --- LOGICA DE ROLES Y MULTI-TENANCY ---
 
     // A) Registro Público (DESHABILITADO POR SEGURIDAD)
     const requester = req.user;
@@ -34,7 +42,7 @@ exports.register = async (req, res) => {
           return res.status(400).json({ message: "Invitación inválida." });
         }
         assignedRole = 'Empleado';
-        ownerId = decodedInvite.ownerId;
+        ownerId = parseInt(decodedInvite.ownerId, 10); // Ensure integer
         status = 'active';
       } catch (e) {
         return res.status(400).json({ message: "El enlace de invitación ha expirado o no es válido." });
@@ -45,14 +53,14 @@ exports.register = async (req, res) => {
       if (requester.role === 'Dueño') {
         // Owner creating Employee manually -> STRICT INHERITANCE
         assignedRole = 'Empleado';
-        ownerId = requester.id; // STRICT: Owner creates employees for themselves
+        ownerId = parseInt(requester.id, 10); // STRICT: Owner creates employees for themselves
         status = 'active'; // Owner created, so it's auto-verified
       } else if (requester.role === 'Administrador') {
         // Admin creating Owner/Other -> Allow manual ownerId assignment if provided in body
         assignedRole = role || 'Dueño';
         // Si el admin envía un ownerId específico en el body, úsalo (para asignar empleado a dueño)
         if (req.body.ownerId && assignedRole === 'Empleado') {
-          ownerId = req.body.ownerId;
+          ownerId = parseInt(req.body.ownerId, 10);
         } else if (assignedRole === 'Dueño') {
           ownerId = null; // Owners are roots
         }
@@ -72,59 +80,58 @@ exports.register = async (req, res) => {
       return res.status(403).json({ message: "El registro público está cerrado. Contacte al administrador o use un enlace de invitación." });
     }
 
-
-    // 2. Verificar duplicados
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El email ya está registrado.' });
-    }
-
-    // 3. Crear Usuario
+    // 4. Crear Usuario
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       username,
       email,
-      phone: req.body.phone || null, // Capture phone
+      phone: req.body.phone || null,
       password: hashedPassword,
       role: assignedRole,
       ownerId: ownerId,
       status: status,
-      dashboardConfig: {}
+      dashboardConfig: {},
+      permissions: {}
     });
 
-    // Enviar correo de bienvenida (async, no bloquear respuesta)
-    // Solo enviar si es un empleado creado por dueño o registro publico, 
-    // y si tenemos el password en plano (que sí lo tenemos aquí como 'password')
-    emailService.sendWelcomeEmail(email, username, password);
-
-    // 4. Generar Token (Solo si es registro propio, si es creación por otro, quizás no queramos autologin)
-    // Si hay requester, es creación administrativa -> No devolver token de login para el nuevo usuario.
-    // Si no hay requester, es auto-registro -> Devolver Token.
-
-    let token = null;
-    if (!requester) {
-      const payload = {
-        id: newUser.id,
-        username: newUser.username,
-        role: newUser.role,
-        ownerId: newUser.ownerId
-      };
-      token = jwt.sign(payload, process.env.JWT_SECRET || 'secreto_temporal', { expiresIn: '8h' });
+    // Enviar correo de bienvenida (async)
+    try {
+      emailService.sendWelcomeEmail(email, username, password);
+    } catch (err) {
+      console.error("Error enviando email bienvenida:", err);
     }
 
-    // Excluir password
-    const userResponse = newUser.toJSON();
-    delete userResponse.password;
+    // 5. Generar Token y Respuesta
+    let token = null;
+
+    // Prepare standardized user object
+    const userResponse = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+      ownerId: newUser.ownerId,
+      status: newUser.status,
+      permissions: newUser.permissions || {}
+    };
+
+    if (!requester || inviteToken) {
+      // Auto-login logic for self-registration or invite-registration
+      const payload = { ...userResponse };
+      // Remove email from payload to keep it smaller if not needed, but keeping standard fields helps
+      // Payload usually needs id, role, ownerId, status, permissions
+      token = jwt.sign(payload, process.env.JWT_SECRET || 'secreto_temporal', { expiresIn: '8h' });
+    }
 
     res.status(201).json({
       message: "Usuario registrado exitosamente",
       user: userResponse,
-      token: token // Puede ser null
+      token: token
     });
 
   } catch (error) {
     if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ message: 'El email ya está registrado.' });
+      return res.status(409).json({ message: 'El email ya está registrado.' });
     }
     console.error("Error en registro:", error);
     res.status(500).json({ message: 'Error en el servidor al registrar usuario.' });
@@ -162,24 +169,37 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Contraseña incorrecta.' });
     }
 
-    // 3. Si todo es correcto, crear un Token (JWT)
+    // 3. Crear Token (JWT)
+    // Standard payload
     const payload = {
       id: user.id,
       username: user.username,
       role: user.role,
       ownerId: user.ownerId,
-      status: user.status
+      status: user.status,
+      permissions: user.permissions || {}
     };
 
-    // --- CORRECCIÓN APLICADA ---
-    // Se utiliza la variable de entorno JWT_SECRET para firmar el token,
-    // en lugar de tener la clave secreta directamente en el código.
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+
+    // 4. Preparar respuesta de usuario estandarizada
+    const userResponse = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      ownerId: user.ownerId,
+      status: user.status,
+      permissions: user.permissions || {}
+    };
 
     res.status(200).json({
       message: "Inicio de sesión exitoso",
+      user: userResponse,
       token: token
     });
+
+    console.log(`🔑 [AUTH] Usuario: ${user.username} | Rol: ${user.role} | OwnerID: ${user.ownerId}`);
 
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor', error: error.message });

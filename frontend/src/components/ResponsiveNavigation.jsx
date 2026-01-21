@@ -3,10 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Calendar, MessageSquare, ClipboardList, PlusCircle, LogOut, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import TorchCheckbox from './TorchCheckbox';
+import { useTheme } from '../context/ThemeContext';
+import MinecraftSwitch from './ui/MinecraftSwitch';
 
 const ResponsiveNavigation = () => {
     const { user, logout } = useAuth();
+    const { toggleTheme } = useTheme();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -17,7 +19,6 @@ const ResponsiveNavigation = () => {
 
         // Owner
         { name: 'Panel Dueño', href: '/dashboard/owner', icon: LayoutDashboard, roles: ['Dueño', 'Administrador'] },
-        { name: 'Inventario', href: '/inventario', icon: ClipboardList, roles: ['Dueño', 'Administrador'] },
         { name: 'Clientes', href: '/clientes', icon: ClipboardList, roles: ['Dueño', 'Administrador'] },
 
         // Employee (and Owner/Admin)
@@ -101,7 +102,7 @@ const ResponsiveNavigation = () => {
 
                 {/* Dark Mode Toggle */}
                 <div className="flex justify-center py-4 border-t border-gray-100 dark:border-gray-800">
-                    <TorchCheckbox />
+                    <MinecraftSwitch checked={user?.theme === 'dark'} onChange={toggleTheme} />
                 </div>
 
                 {/* Logout */}

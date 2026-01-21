@@ -39,7 +39,8 @@ const ChalkMetricsBoard = ({ salesData, financials, bakers }) => {
     // Calculate productivity or percentage collected
     const collectionRate = expected > 0 ? Math.round((collected / expected) * 100) : 0;
 
-    const colors = ['#FFD700', '#87CEEB', '#FF69B4', '#FFA500', '#98FB98', '#E6E6FA', '#FF7F50'];
+    // Updated colors for better visibility on chocolate background
+    const colors = ['#FDF8F1', '#E6E6FA', '#FDF8F1', '#E6E6FA', '#FDF8F1', '#E6E6FA', '#FDF8F1'];
 
     return (
         <ChalkboardContainer className="w-full">
@@ -65,28 +66,27 @@ const ChalkMetricsBoard = ({ salesData, financials, bakers }) => {
                         <BarChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
                             <XAxis
                                 dataKey="name" // Day names
-                                stroke="#ffffff90"
-                                tick={{ fill: '#ffffff90', fontFamily: 'Cabin Sketch', fontSize: 14 }}
+                                stroke="#FDF8F1"
+                                tick={{ fill: '#FDF8F1', fontFamily: 'Cabin Sketch', fontSize: 16, fontWeight: 'bold' }}
                                 tickLine={false}
-                                axisLine={{ stroke: '#ffffff50', strokeWidth: 2 }}
+                                axisLine={{ stroke: '#FDF8F1', strokeWidth: 2, opacity: 0.6 }}
                                 interval={0} // Show all days
                             />
                             <YAxis hide />
-                            <Bar dataKey="ventas" radius={[4, 4, 0, 0]} isAnimationActive={true}>
+                            <Bar dataKey="ventas" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1500} animationBegin={300}>
                                 {data.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
-                                        fill={colors[index % colors.length]}
+                                        fill={index % 2 === 0 ? '#FDF8F1' : '#E6E6FA'} // Cream and Chalk White
                                         stroke="white"
-                                        strokeWidth={2}
-                                        strokeDasharray="4 4"
-                                        fillOpacity={0.6}
+                                        strokeWidth={1}
+                                        fillOpacity={0.9}
                                     />
                                 ))}
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
-                    <p className="text-center text-xs text-white/40 font-sans mt-2">Ingresos por día (Esta semana)</p>
+                    <p className="text-center text-xs text-white/60 font-sans mt-2">Ingresos por día (Esta semana)</p>
                 </div>
 
                 {/* Right Column: Baker Ranking */}
