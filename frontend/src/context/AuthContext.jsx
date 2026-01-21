@@ -24,19 +24,26 @@ export const AuthProvider = ({ children }) => {
         if (token) {
             const decoded = decodeToken(token);
             if (decoded) {
-                // If token is valid, we set the user. 
-                // We trust the token's payload for role/username.
-                // Ensure we reconstruct a user object similar to login response if possible, 
-                // or just minimum needed from token.
-                setUser({ ...decoded, token });
-                // Set default axios header just in case it wasn't set
+                // Determine role safely and force lowercase
+                const rawRole = decoded.role || decoded.user_role || '';
+                const role = String(rawRole).toLowerCase();
+
+                // Construct user object explicitly
+                const userObj = {
+                    ...decoded,
+                    token,
+                    role: role
+                };
+
+                setUser(userObj);
+
+                // Set default axios header immediately
                 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             } else {
                 console.warn("Token invalid on boot, forcing logout.");
-                logout(); // Use the robust logout function
+                logout();
             }
         }
-        // Note: No else block needed to redirect if no token, ProtectedRoute handles that.
         setLoading(false);
     }, []);
 
@@ -60,7 +67,9 @@ export const AuthProvider = ({ children }) => {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
         // Construct final user object matching what we want in state
-        const userObj = { ...userData, token };
+        const rawRole = userData.role || userData.user_role || (decodeToken(token)?.role) || '';
+        const role = String(rawRole).toLowerCase();
+        const userObj = { ...userData, token, role };
         setUser(userObj);
 
         return userObj;

@@ -26,11 +26,18 @@ const KanbanBoard = () => {
 
     const fetchFolios = async () => {
         try {
-            const data = await folioService.getAllFolios({ status: '' }); // Fetch all statuses
-            setFolios(sanitizeFolioList(data));
+            const response = await folioService.getAllFolios({ status: '' }); // Fetch all statuses
+
+            // Robust check: Handle array directly or { data: [...] } structure
+            const foliosData = Array.isArray(response)
+                ? response
+                : (response?.data && Array.isArray(response.data) ? response.data : []);
+
+            setFolios(sanitizeFolioList(foliosData));
             setLoading(false);
         } catch (err) {
-            setError('Error al cargar el tablero.');
+            console.error("Error loading Kanban board:", err);
+            setError('Error al cargar el tablero de producción.');
             setLoading(false);
         }
     };

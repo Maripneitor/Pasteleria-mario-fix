@@ -14,7 +14,7 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
 
     // Role check - if allowedRoles is provided and not empty
     if (allowedRoles.length > 0) {
-        const userRole = user.role.toLowerCase();
+        const userRole = (user.role || '').toLowerCase();
         const normalizedAllowed = allowedRoles.map(r => r.toLowerCase());
 
         if (!normalizedAllowed.includes(userRole)) {

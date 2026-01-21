@@ -17,14 +17,20 @@ import { DollarSign, Package, Clock, PlusCircle, Calendar as CalendarIcon, UserP
 const Dashboard = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+
+    // Role definition must be before hooks that rely on it (like useEffect dependency arrays)
+    const role = user?.role || 'Guest';
+
     const [inviteToken, setInviteToken] = React.useState(null);
     const [showQrModal, setShowQrModal] = React.useState(false);
 
     // Real Data State
     const [dailyStats, setDailyStats] = React.useState({
         totalSales: 0,
-        activeOrders: 0, // Mocked for now if API doesn't return count, or derive it
-        pendingOrders: 0
+        activeOrders: 0,
+        pendingOrders: 0,
+        realIncome: 0,
+        pendingBalance: 0
     });
     const [loadingStats, setLoadingStats] = React.useState(true);
 
@@ -35,8 +41,10 @@ const Dashboard = () => {
                     const response = await api.get('/dashboard/daily-summary');
                     setDailyStats({
                         totalSales: response.data.totalSales || 0,
-                        activeOrders: response.data.activeOrders || 0, // Ensure backend provides this or keep mock
-                        pendingOrders: response.data.pendingOrders || 0
+                        activeOrders: response.data.activeOrders || 0,
+                        pendingOrders: response.data.pendingOrders || 0,
+                        realIncome: response.data.realIncome || 0,
+                        pendingBalance: response.data.pendingBalance || 0
                     });
                 } catch (error) {
                     console.error("Error fetching dashboard stats:", error);
@@ -59,9 +67,6 @@ const Dashboard = () => {
             alert("Error generando invitación. Solo dueños pueden hacerlo.");
         }
     };
-
-    // Default role just in case
-    const role = user?.role || 'Guest';
 
     // Animation Variants
     const letterVariants = {

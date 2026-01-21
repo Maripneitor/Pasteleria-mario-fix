@@ -33,6 +33,7 @@ export const SystemLogProvider = ({ children }) => {
     // Escuchar eventos desde fuera de React (ej. api.js interceptors)
     React.useEffect(() => {
         const handleSystemLog = (event) => {
+            if (!event?.detail) return;
             const { level, message, data } = event.detail;
             addLog(level, message, data);
         };

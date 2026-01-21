@@ -2,8 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import KanbanCard from './KanbanCard';
 
-const KanbanColumn = ({ status, title, folios, color, onDrop, activeDrag }) => {
-    const filteredFolios = folios.filter(f => f.status === status);
+const KanbanColumn = ({ status, title, folios = [], color, onDrop, activeDrag }) => {
+    const safeFolios = Array.isArray(folios) ? folios : [];
+    const filteredFolios = safeFolios.filter(f => f.status === status);
 
     const handleDragOver = (e) => {
         e.preventDefault();
