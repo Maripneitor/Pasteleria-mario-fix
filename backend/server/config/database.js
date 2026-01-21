@@ -26,6 +26,7 @@ const conectarDB = async () => {
 
     // Verifica que la conexión con la base de datos se ha establecido correctamente.
     await sequelize.authenticate();
+    console.log(`✅ Conexión a la base de datos establecida (MySQL en ${process.env.DB_HOST}/${process.env.DB_NAME})`);
   } catch (error) {
     console.error('❌ No se pudo conectar a la base de datos:', error);
   }

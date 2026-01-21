@@ -1,12 +1,17 @@
 import React from 'react';
-import VelaSwitch from './VelaSwitch';
+import Switch from './Switch';
+import { useTheme } from '../../context/ThemeContext';
 
 const TorchToggle = () => {
   const { isDark, toggleTheme } = useTheme();
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <VelaSwitch isChecked={isDark} onChange={toggleTheme} />
+      <Switch
+        checked={isDark}
+        onChange={toggleTheme}
+        label={isDark ? "Dark Mode" : "Light Mode"}
+      />
     </div>
   );
 };

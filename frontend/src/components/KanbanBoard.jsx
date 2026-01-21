@@ -100,7 +100,7 @@ const KanbanBoard = () => {
                     />
                 </div>
             ) : (
-                <div className="flex-1 overflow-x-auto overflow-y-hidden">
+                <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-50 dark:bg-bakery-950 transition-colors">
                     <div className="flex h-full gap-4 p-4 min-w-max pb-6">
                         {COLUMNS.map(col => (
                             <KanbanColumn

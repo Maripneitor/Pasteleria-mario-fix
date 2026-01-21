@@ -9,8 +9,17 @@ const Flavor = sequelize.define('Flavor', {
     },
     name: {
         type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
+        allowNull: false
+        // Removed unique: true to allow multiple owners to have "Vanilla"
+    },
+    ownerId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Owner ID (Tenant). If null, it is a global/system flavor.'
+    },
+    available: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
     },
     price: {
         type: DataTypes.DECIMAL(10, 2),

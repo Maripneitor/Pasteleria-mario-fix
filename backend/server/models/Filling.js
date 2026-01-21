@@ -11,6 +11,15 @@ const Filling = sequelize.define('Filling', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    ownerId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Owner ID (Tenant). If null, it is a global/system filling.'
+    },
+    available: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
     isPaid: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

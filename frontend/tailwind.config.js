@@ -4,31 +4,36 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
-    darkMode: 'class', // Habilitar modo oscuro por clase
+    darkMode: 'class',
     theme: {
         extend: {
             colors: {
                 bakery: {
-                    cream: '#FDF8F1',
-                    chocolate: '#3E2723',
-                    'burnt-wood': '#2A1A10',
+                    // Professional Slate Palette
+                    // Light Mode
+                    50: '#F8FAFC', // Slate-50: Background Light
+                    100: '#F1F5F9', // Slate-100: Secondary Background
+                    200: '#E2E8F0', // Slate-200: Borders / Disabled
 
-                    // Legacy/Existing mappings
-                    milk: '#FFFFFF',
-                    accent: '#D4A373',
-                    muted: '#8D6E63',
-                    success: '#CCD5AE',
-                    error: '#E6B8A2',
-                    primary: '#D4A373',
-                    secondary: '#FDF8F1',
-                    text: '#3E2723',
-                    'dark-surface': '#3E2723',
-                    'dark-text': '#FDF8F1',
-                    'torch-fire': '#E65100',
+                    // Main Text / Elements
+                    500: '#64748B', // Slate-500: Muted Text
+                    600: '#475569', // Slate-600
+                    700: '#334155', // Slate-700: Dark Mode Borders
+                    800: '#1E293B', // Slate-800: Dark Mode Cards / Light Mode Text
+                    900: '#0F172A', // Slate-900
+                    950: '#020617', // Slate-950: Dark Mode Background
+
+                    // Semantic Aliases
+                    primary: '#3B82F6', // Blue-500: Primary Action
+                    'primary-hover': '#2563EB', // Blue-600
+                    success: '#10B981', // Emerald-500
+                    error: '#EF4444', // Red-500
+                    warning: '#F59E0B', // Amber-500
                 },
-                'bakery-burnt-wood': '#2A1A10', // Explicit hyphenated name for Tailwind class generation
-                'torch-fire': '#E65100',
             },
+            fontFamily: {
+                sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            }
         },
     },
     plugins: [],

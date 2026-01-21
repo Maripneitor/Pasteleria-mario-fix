@@ -99,14 +99,14 @@ const Calendar = () => {
     }, [selectedFolio, folios]);
 
     return (
-        <div className="h-full flex flex-col bg-gray-50 p-6 space-y-6 overflow-hidden">
+        <div className="h-full flex flex-col bg-gray-50 dark:bg-bakery-950 p-6 space-y-6 overflow-hidden">
             {/* Header & Filters */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
                 <div className="flex items-center gap-3 text-red-600">
-                    <div className="p-2 bg-red-100 rounded-lg">
+                    <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
                         <CalendarIcon size={24} />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-800">Calendario de Entregas</h1>
+                    <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Calendario de Entregas</h1>
                 </div>
 
                 <div className="relative w-full md:w-96 group">
@@ -115,7 +115,7 @@ const Calendar = () => {
                     </div>
                     <input
                         type="text"
-                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg leading-5 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 dark:border-slate-600 rounded-lg leading-5 bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:bg-white dark:focus:bg-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                         placeholder="Buscar por cliente o folio..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -124,7 +124,7 @@ const Calendar = () => {
             </div>
 
             {/* Calendar Container */}
-            <div className="flex-1 bg-white rounded-xl shadow-lg border border-gray-100 p-6 overflow-hidden flex flex-col">
+            <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 p-6 overflow-hidden flex flex-col">
                 <FullCalendar
                     plugins={[dayGridPlugin, interactionPlugin]}
                     initialView="dayGridMonth"

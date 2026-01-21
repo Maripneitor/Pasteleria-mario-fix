@@ -46,3 +46,25 @@ cron.schedule('0 21 * * *', async () => {
     scheduled: true,
     timezone: "America/Mexico_City" // Aseguramos la zona horaria correcta
 });
+
+// Tarea programada: Reporte Semanal de Ventas (Lunes 9:00 AM)
+cron.schedule('0 9 * * 1', async () => {
+    console.log('📅 Ejecutando tarea programada: Reporte Semanal...');
+    try {
+        const now = new Date();
+        const startOfLastWeek = subDays(now, 7);
+        const reportDate = format(now, 'yyyy-MM-dd');
+
+        // Lógica simple para notificar
+        console.log(`Simulando generación de reporte semanal del ${format(startOfLastWeek, 'yyyy-MM-dd')} al ${reportDate}`);
+
+        // Aquí iría la lógica real de PDF/Email similar al diario
+        // await sendEmailWithAttachment(adminEmail, "Reporte Semanal", "Resumen de ventas...", pdfBuffer, "Weekly.pdf");
+
+    } catch (error) {
+        console.error('❌ Error en reporte semanal:', error);
+    }
+}, {
+    scheduled: true,
+    timezone: "America/Mexico_City"
+});

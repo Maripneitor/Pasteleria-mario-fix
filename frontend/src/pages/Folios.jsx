@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
-import { Plus, Calendar, User, DollarSign, X, Cake, Flame } from 'lucide-react';
+import { Plus, Calendar, User, DollarSign, X, Cake, Flame, LayoutGrid, List } from 'lucide-react';
 import FolioCardSkeleton from '../components/FolioCardSkeleton';
 import SwipeableFolioCard from '../components/SwipeableFolioCard';
 import DigitalSignatureModal from '../components/DigitalSignatureModal';
@@ -15,7 +15,8 @@ const Folios = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [isFocusMode, setIsFocusMode] = useState(false);
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+
 
     // Interactions State
     const [signingFolio, setSigningFolio] = useState(null); // Folio being signed
@@ -120,55 +121,34 @@ const Folios = () => {
     };
 
     return (
-        <div className={`p-6 min-h-screen transition-colors duration-700 ${isFocusMode ? 'bg-[#0F0A06]' : 'bg-bakery-cream'}`}>
-
-            {/* Dark Overlay for non-focus items */}
-            <AnimatePresence>
-                {isFocusMode && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.8 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black pointer-events-none z-10"
-                    />
-                )}
-            </AnimatePresence>
+        <div className="p-6 min-h-screen bg-bakery-50 dark:bg-bakery-950 transition-colors duration-300">
 
             {/* Header */}
             <div className="flex justify-between items-center mb-8 relative z-20">
                 <div>
-                    <motion.h1
-                        layout
-                        className={`text-3xl font-serif font-bold transition-colors duration-500 ${isFocusMode ? 'text-[#F59E0B]' : 'text-bakery-text'}`}
-                    >
-                        {isFocusMode ? 'Modo Cocina (Vela)' : 'Gestión de Pedidos'}
-                    </motion.h1>
-                    <p className={`mt-1 hidden md:block transition-colors duration-500 ${isFocusMode ? 'text-gray-400' : 'text-bakery-muted'}`}>
-                        {isFocusMode ? 'Solo pedidos con entrega HOY están iluminados.' : 'Desliza: Derecha (Listo) | Izquierda (Firmar)'}
+                    <h1 className="text-3xl font-serif font-bold text-bakery-text dark:text-bakery-milk transition-colors">
+                        Gestión de Pedidos
+                    </h1>
+                    <p className="mt-1 hidden md:block text-bakery-muted dark:text-gray-400">
+                        Desliza: Derecha (Listo) | Izquierda (Firmar)
                     </p>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Torch Button */}
-                    <button
-                        onClick={() => setIsFocusMode(!isFocusMode)}
-                        className={`group relative flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-500 overflow-hidden
-                            ${isFocusMode
-                                ? 'bg-[#2A1A10] border-[#F59E0B] text-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.4)]'
-                                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                            }`}
-                    >
-                        {/* Torch Flame Animation */}
-                        {isFocusMode && (
-                            <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-transparent"
-                                animate={{ x: ['-100%', '100%'] }}
-                                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-                            />
-                        )}
-                        <Flame size={18} className={`transition-colors duration-300 ${isFocusMode ? 'fill-orange-500 text-orange-600' : 'text-gray-400'}`} />
-                        <span className="font-medium text-sm relative z-10">Vela</span>
-                    </button>
+                    <div className="flex bg-white dark:bg-bakery-800 rounded-lg p-1 border border-gray-200 dark:border-bakery-700 mr-2">
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-bakery-100 dark:bg-bakery-700 text-bakery-primary' : 'text-gray-400 dark:text-gray-500 hover:text-bakery-primary'}`}
+                        >
+                            <LayoutGrid size={20} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-bakery-100 dark:bg-bakery-700 text-bakery-primary' : 'text-gray-400 dark:text-gray-500 hover:text-bakery-primary'}`}
+                        >
+                            <List size={20} />
+                        </button>
+                    </div>
 
                     <button
                         onClick={() => setShowCreateModal(true)}
@@ -203,56 +183,68 @@ const Folios = () => {
                     }
                 />
             ) : (
-                <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20 relative z-20"
-                >
-                    {folios.map((folio) => {
-                        const deliveryDate = new Date(`${folio.deliveryDate}T${folio.deliveryTime}`);
-                        const now = new Date();
-
-                        // Check if strictly today
-                        const isToday = now.toDateString() === deliveryDate.toDateString();
-                        const isUrgent = isToday;
-
-                        return (
+                viewMode === 'grid' ? (
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20 relative z-20"
+                    >
+                        {folios.map((folio) => (
                             <motion.div
                                 key={folio.id || folio._id || folio.folioNumber}
                                 onClick={() => setSelectedFolio(folio)}
                                 layout
                                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                                className={`relative rounded-2xl transition-all duration-500 cursor-pointer
-                                    ${isFocusMode
-                                        ? (isUrgent
-                                            ? 'scale-105 z-30 animate-pulse shadow-[0_0_15px_#D4A373] ring-4 ring-orange-500/60'
-                                            : 'scale-90 opacity-10 blur-[3px] grayscale brightness-50 pointer-events-none')
-                                        : 'scale-100 opacity-100'
-                                    }
-                                `}
+                                className="relative rounded-2xl transition-all duration-500 cursor-pointer scale-100 opacity-100"
                             >
-                                {/* Torch Glow Effect Layer */}
-                                {isFocusMode && isUrgent && (
-                                    <>
-                                        <div className="absolute -inset-4 bg-orange-500/20 blur-2xl rounded-[3rem] pointer-events-none animate-pulse"></div>
-                                        <motion.div
-                                            className="absolute -inset-1 border-2 border-orange-400/50 rounded-2xl z-40"
-                                            animate={{ opacity: [0.5, 1, 0.5] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                        />
-                                    </>
-                                )}
-
                                 <SwipeableFolioCard
                                     folio={folio}
                                     onDeliver={handleDeliverSwipe}
                                     onSign={handleSignSwipe}
                                 />
                             </motion.div>
-                        );
-                    })}
-                </motion.div>
+                        ))}
+                    </motion.div>
+                ) : (
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+                                <thead className="bg-gray-50 dark:bg-slate-800 text-xs uppercase font-medium">
+                                    <tr>
+                                        <th className="px-6 py-4">Folio</th>
+                                        <th className="px-6 py-4">Cliente</th>
+                                        <th className="px-6 py-4">Fecha Entrega</th>
+                                        <th className="px-6 py-4">Total</th>
+                                        <th className="px-6 py-4">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                                    {folios.map((folio) => (
+                                        <tr
+                                            key={folio.id}
+                                            onClick={() => setSelectedFolio(folio)}
+                                            className="hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                                        >
+                                            <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">#{folio.folioNumber}</td>
+                                            <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{folio.clientName}</td>
+                                            <td className="px-6 py-4">{folio.deliveryDate}</td>
+                                            <td className="px-6 py-4 text-green-600 dark:text-green-400 font-bold">${folio.total}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold 
+                                                    ${folio.status === 'Entregado' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                        folio.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                            'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                                                    {folio.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )
             )}
 
             {/* Modals remain the same */}

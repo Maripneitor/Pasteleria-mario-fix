@@ -11,14 +11,43 @@ import ChalkMetricsBoard from '../components/dashboard/ChalkMetricsBoard';
 import CashClosing from '../components/dashboard/CashClosing';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../services/api';
-import AdminUserManagement from '../components/admin/AdminUserManagement';
+
+import { DollarSign, Package, Clock, PlusCircle, Calendar as CalendarIcon, UserPlus, FileText, CheckCircle } from 'lucide-react';
 
 const Dashboard = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { showSuccess } = useToast();
     const [inviteToken, setInviteToken] = React.useState(null);
     const [showQrModal, setShowQrModal] = React.useState(false);
+
+    // Real Data State
+    const [dailyStats, setDailyStats] = React.useState({
+        totalSales: 0,
+        activeOrders: 0, // Mocked for now if API doesn't return count, or derive it
+        pendingOrders: 0
+    });
+    const [loadingStats, setLoadingStats] = React.useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (role === 'Administrador' || role === 'Dueño' || role === 'Vendedor') {
+                try {
+                    const response = await api.get('/dashboard/daily-summary');
+                    setDailyStats({
+                        totalSales: response.data.totalSales || 0,
+                        activeOrders: response.data.activeOrders || 0, // Ensure backend provides this or keep mock
+                        pendingOrders: response.data.pendingOrders || 0
+                    });
+                } catch (error) {
+                    console.error("Error fetching dashboard stats:", error);
+                } finally {
+                    setLoadingStats(false);
+                }
+            }
+        };
+
+        fetchStats();
+    }, [role]);
 
     const generateInvite = async () => {
         try {
@@ -56,7 +85,7 @@ const Dashboard = () => {
     const heading = "Pastelería La Fiesta";
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-red-50 font-sans text-gray-900 flex">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-red-50 dark:from-bakery-950 dark:via-slate-900 dark:to-bakery-900 font-sans text-gray-900 dark:text-white flex">
 
             {/* Conditional Navigation */}
             <Navigation />
@@ -112,9 +141,28 @@ const Dashboard = () => {
                                     className="grid grid-cols-1 sm:grid-cols-3 gap-6"
                                     variants={containerVariants}
                                 >
-                                    <StatCard title="Ventas del Día" value="$2,450" icon="💰" color="bg-green-100 text-green-600" delay={0.1} />
-                                    <StatCard title="Pedidos Activos" value="12" icon="📦" color="bg-blue-100 text-blue-600" delay={0.2} />
-                                    <StatCard title="Pendientes" value="5" icon="⏳" color="bg-yellow-100 text-yellow-600" delay={0.3} />
+                                    <StatCard
+                                        title="Ventas del Día"
+                                        value={loadingStats ? "..." : `$${dailyStats.totalSales.toLocaleString()}`}
+                                        icon={<DollarSign size={24} />}
+                                        color="bg-green-100 text-green-600"
+                                        delay={0.1}
+                                    />
+                                    {/* These might need backend adjustments to get counts specifically, using placeholders or partial data */}
+                                    <StatCard
+                                        title="Ingreso Real (Hoy)"
+                                        value={loadingStats ? "..." : `$${(dailyStats.realIncome || 0).toLocaleString()}`}
+                                        icon={<Package size={24} />}
+                                        color="bg-blue-100 text-blue-600"
+                                        delay={0.2}
+                                    />
+                                    <StatCard
+                                        title="Saldo Pendiente"
+                                        value={loadingStats ? "..." : `$${(dailyStats.pendingBalance || 0).toLocaleString()}`}
+                                        icon={<Clock size={24} />}
+                                        color="bg-yellow-100 text-yellow-600"
+                                        delay={0.3}
+                                    />
                                 </motion.div>
 
                                 {/* Main Graph/Content Area */}
@@ -125,7 +173,7 @@ const Dashboard = () => {
 
                             {/* Notifications Area */}
                             <div className="lg:col-span-4 space-y-6 flex flex-col items-center lg:items-end">
-                                <NotificationCard message="Alerta IA" text="Inventario de harina bajo. Pronóstico sugiere reabastecer hoy." />
+                                {/* <NotificationCard message="Alerta IA" text="Inventario de harina bajo. Pronóstico sugiere reabastecer hoy." /> REMOVED LEGACY */}
                             </div>
                         </div>
                     )}
@@ -141,14 +189,14 @@ const Dashboard = () => {
                                     desc="Crear orden personalizada"
                                     color="from-red-500 to-red-600"
                                     onClick={() => navigate('/folio/nuevo')}
-                                    icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>}
+                                    icon={<PlusCircle className="w-8 h-8 text-white" />}
                                 />
                                 <DashboardAction
                                     title="Ver Calendario"
                                     desc="Consultar fechas de entrega"
                                     color="from-blue-500 to-blue-600"
                                     onClick={() => navigate('/calendario')}
-                                    icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                                    icon={<CalendarIcon className="w-8 h-8 text-white" />}
                                 />
                                 {/* OWNER ONLY ACTION */}
                                 {role === 'Dueño' && (
@@ -158,7 +206,7 @@ const Dashboard = () => {
                                             desc="Invitar vía QR"
                                             color="from-amber-600 to-amber-700"
                                             onClick={generateInvite}
-                                            icon={<svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
+                                            icon={<UserPlus className="w-8 h-8 text-white" />}
                                         />
                                         {showQrModal && (
                                             <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowQrModal(false)}>

@@ -1,191 +1,75 @@
 import React from 'react';
-import styled from 'styled-components';
+import { Check, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const ProductionStepper = ({ currentStep = 2, steps = [
-    { title: "Pedido Recibido", time: "10:24 AM", status: "Completado" },
-    { title: "En Producción", time: "02:15 PM", status: "En Proceso" },
-    { title: "Terminado", time: "Estimado: 4:00 PM", status: "Pendiente" }
+  { title: "Pedido Recibido", time: "10:24 AM", status: "Completado" },
+  { title: "En Producción", time: "02:15 PM", status: "En Proceso" },
+  { title: "Terminado", time: "Estimado: 4:00 PM", status: "Pendiente" }
 ] }) => {
-    return (
-        <StyledWrapper>
-            <div className="stepper-box">
-                {steps.map((step, index) => {
-                    let statusClass = "stepper-pending";
-                    if (index + 1 < currentStep) statusClass = "stepper-completed";
-                    else if (index + 1 === currentStep) statusClass = "stepper-active";
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-8 w-full max-w-[400px] shadow-sm border border-gray-100 dark:border-slate-700 transition-colors duration-300">
+      {steps.map((step, index) => {
+        const stepNum = index + 1;
+        let status = "pending";
+        if (stepNum < currentStep) status = "completed";
+        if (stepNum === currentStep) status = "active";
 
-                    return (
-                        <div key={index} className={`stepper-step ${statusClass}`}>
-                            <div className="stepper-circle">
-                                {index + 1 < currentStep ? (
-                                    <svg viewBox="0 0 16 16" className="bi bi-check-lg" fill="currentColor" height={16} width={16} xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z" />
-                                    </svg>
-                                ) : (
-                                    index + 1
-                                )}
-                            </div>
-                            <div className="stepper-line" />
-                            <div className="stepper-content">
-                                <div className="stepper-title">{step.title}</div>
-                                <div className="stepper-status">{step.status}</div>
-                                <div className="stepper-time">{step.time}</div>
-                            </div>
-                        </div>
-                    );
-                })}
+        return (
+          <div key={index} className="flex mb-8 relative last:mb-0">
+            {/* Connecting Line */}
+            {index < steps.length - 1 && (
+              <div className="absolute left-[19px] top-10 bottom-[-32px] w-0.5 bg-gray-200 dark:bg-slate-700 z-0"></div>
+            )}
 
-                <div className="stepper-controls">
-                    <button className="stepper-button">
-                        <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="currentColor" className="bi bi-arrow-left" viewBox="0 0 16 16">
-                            <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8" />
-                        </svg>
-                        Anterior
-                    </button>
-                    <button className="stepper-button stepper-button-primary">
-                        Siguiente
-                        <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="currentColor" className="bi bi-arrow-right" viewBox="0 0 16 16">
-                            <path fillRule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8" />
-                        </svg>
-                    </button>
-                </div>
+            {/* Circle */}
+            <div className={`
+                            w-10 h-10 rounded-full flex items-center justify-center mr-4 z-10 transition-colors duration-300
+                            ${status === 'completed'
+                ? 'bg-slate-900 text-white dark:bg-blue-600'
+                : status === 'active'
+                  ? 'border-2 border-slate-900 text-slate-900 dark:border-blue-500 dark:text-blue-500'
+                  : 'border-2 border-gray-200 text-gray-400 dark:border-slate-600 dark:text-gray-500'
+              }
+                        `}>
+              {status === 'completed' ? <Check size={16} /> : stepNum}
             </div>
-        </StyledWrapper>
-    );
+
+            {/* Content */}
+            <div className="flex-1">
+              <div className={`font-semibold mb-1 ${status === 'active' || status === 'completed' ? 'text-slate-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                {step.title}
+              </div>
+              <span className={`
+                                text-xs inline-block px-2 py-0.5 rounded-full mb-1
+                                ${status === 'completed'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  : status === 'active'
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'
+                }
+                            `}>
+                {step.status}
+              </span>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {step.time}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="flex justify-between mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+        <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors text-sm">
+          <ArrowLeft size={16} />
+          Anterior
+        </button>
+        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 dark:bg-blue-600 text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors text-sm">
+          Siguiente
+          <ArrowRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
 }
-
-const StyledWrapper = styled.div`
-  .stepper-box {
-    background-color: white;
-    border-radius: 12px;
-    padding: 32px;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  }
-
-  .stepper-step {
-    display: flex;
-    margin-bottom: 32px;
-    position: relative;
-  }
-
-  .stepper-step:last-child {
-    margin-bottom: 0;
-  }
-
-  .stepper-line {
-    position: absolute;
-    left: 19px;
-    top: 40px;
-    bottom: -32px;
-    width: 2px;
-    background-color: #e2e8f0;
-    z-index: 1;
-  }
-
-  .stepper-step:last-child .stepper-line {
-    display: none;
-  }
-
-  .stepper-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 16px;
-    z-index: 2;
-    background-color: white;
-  }
-
-  .stepper-completed .stepper-circle {
-    background-color: #0f172a;
-    color: white;
-  }
-
-  .stepper-active .stepper-circle {
-    border: 2px solid #0f172a;
-    color: #0f172a;
-  }
-
-  .stepper-pending .stepper-circle {
-    border: 2px solid #e2e8f0;
-    color: #94a3b8;
-  }
-
-  .stepper-content {
-    flex: 1;
-  }
-
-  .stepper-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .stepper-completed .stepper-title {
-    color: #0f172a;
-  }
-
-  .stepper-active .stepper-title {
-    color: #0f172a;
-  }
-
-  .stepper-pending .stepper-title {
-    color: #94a3b8;
-  }
-
-  .stepper-status {
-    font-size: 13px;
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin-top: 4px;
-  }
-
-  .stepper-completed .stepper-status {
-    background-color: #dcfce7;
-    color: #166534;
-  }
-
-  .stepper-active .stepper-status {
-    background-color: #dbeafe;
-    color: #1d4ed8;
-  }
-
-  .stepper-pending .stepper-status {
-    background-color: #f1f5f9;
-    color: #64748b;
-  }
-
-  .stepper-time {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 4px;
-  }
-
-  .stepper-controls {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 32px;
-  }
-
-  .stepper-button {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    background-color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .stepper-button-primary {
-    background-color: #0f172a;
-    color: white;
-    border-color: #0f172a;
-  }`;
 
 export default ProductionStepper;

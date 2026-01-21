@@ -69,15 +69,35 @@ exports.register = async (req, res) => {
         return res.status(403).json({ message: "No tienes permisos para registrar usuarios." });
       }
     }
-    // CASE 3: Public Registration (Block if neither invite nor authorized requester)
+    // CASE 3: Public Registration (New Tenants)
     else {
-      await SystemLog.create({
-        level: 'security',
-        section: 'Auth',
-        message: `Intento de registro público bloqueado: ${email}`,
-        meta: { email, ip: req.ip, body: req.body }
-      });
-      return res.status(403).json({ message: "El registro público está cerrado. Contacte al administrador o use un enlace de invitación." });
+      // ✅ PERMITIR REGISTRO PÚBLICO
+      // Si no hay token de invitación y nadie está logueado, asumimos que es un nuevo Dueño registrándose.
+
+      // Restricción de seguridad: NUNCA permitir registrar 'Administrador' públicamente
+      if (role === 'Administrador') {
+        await SystemLog.create({
+          level: 'security',
+          section: 'Auth',
+          message: `Intento de creación de Admin bloqueado: ${email}`,
+          meta: { email, ip: req.ip, body: req.body }
+        });
+        return res.status(403).json({ message: "No puedes registrarte como Administrador públicamente." });
+      }
+
+      // Por defecto, registro público crea un 'Dueño' (Tenant)
+      // Si el frontend envía 'Empleado' pero sin token, lo forzamos a 'Dueño' o rechazamos?
+      // Política: Registro público = Nueva Pastelería = Dueño.
+      // Si quiere ser empleado, necesita invitación.
+      if (role === 'Empleado') {
+        return res.status(403).json({ message: "Para registrarte como Empleado necesitas un enlace de invitación de tu jefe." });
+      }
+
+      assignedRole = 'Dueño';
+      ownerId = null; // Es root
+      status = 'active'; // O 'pending_verification' si quisieras confirmar emails
+
+      console.log(`🌍 Registro Público iniciado: ${email} como ${assignedRole}`);
     }
 
     // 4. Crear Usuario

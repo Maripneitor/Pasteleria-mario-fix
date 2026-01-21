@@ -24,6 +24,9 @@ const ImageAnalyzer = ({ onAnalysisComplete }) => {
         // Mock Delay
         await new Promise(resolve => setTimeout(resolve, 2500));
 
+        // TODO: Replace with actual Computer Vision API call
+        // const response = await api.post('/analyze-image', formData);
+        // setAnalysisResult(response.data.analysis);
         const mockAnalysis = "Diseño complejo detectado. \nTécnicas: Fondant moldeado, efecto acuarela.\nDificultad estimada: Alta.\nRecomendación: Cobrar extra por modelado 3D.";
 
         setAnalysisResult(mockAnalysis);

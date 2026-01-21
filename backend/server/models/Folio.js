@@ -129,6 +129,11 @@ const Folio = sequelize.define('Folio', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  classification: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Auto-calculated classification: { priority, urgency, valueLevel }'
   }
 }, { tableName: 'folios' });
 

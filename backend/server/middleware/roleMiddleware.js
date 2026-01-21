@@ -9,11 +9,15 @@ function authorize(roles = []) {
 
   return (req, res, next) => {
     // Verificamos si el rol del usuario (que viene del token) está en la lista de roles permitidos.
-    if (!req.user || !roles.includes(req.user.role)) {
+    // Hacemos la comparación case-insensitive para evitar dolores de cabeza
+    const userRole = req.user.role.toLowerCase();
+    const allowedRoles = roles.map(r => r.toLowerCase());
+
+    if (!req.user || !allowedRoles.includes(userRole)) {
       // Si no hay usuario o su rol no está permitido, denegamos el acceso.
       return res.status(403).json({ message: 'No tienes permiso para realizar esta acción.' });
     }
-    
+
     // Si tiene el permiso, la petición continúa hacia el controlador.
     next();
   };

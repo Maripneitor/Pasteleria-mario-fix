@@ -19,7 +19,9 @@ class FolioService {
         basePrice = 0,
         additionalItems = [],
         deliveryCost = 0,
-        applyCommission = false
+        applyCommission = false,
+        advancePayment = 0,
+        isPaid = false
     }) {
         // 1. Calcular Costo de Rellenos (Dinámico)
         let fillingCost = 0;
@@ -59,13 +61,27 @@ class FolioService {
         // 5. Anticipo Mínimo (Regla de negocio: 50%)
         const anticipoMinimo = Math.ceil(total * 0.5);
 
+        // 6. Calcular Balance y Estado de Pago
+        // Si nos pasan isPaid = true, entonces anticipo = total y balance = 0
+        let finalAdvancePayment = parseFloat(advancePayment) || 0;
+
+        if (isPaid === true || isPaid === 'true') {
+            finalAdvancePayment = totalBeforeAdvance;
+        }
+
+        const balance = totalBeforeAdvance - finalAdvancePayment;
+        const finalIsPaid = balance <= 0.01; // Tolerancia de centavos
+
         return {
             subtotal: parseFloat(subtotal.toFixed(2)),
             fillingCost: parseFloat(fillingCost.toFixed(2)),
             commission: parseFloat(roundedCommission.toFixed(2)),
             rawCommission: parseFloat(commissionAmount.toFixed(2)), // Por si se necesita el valor exacto
-            total: parseFloat(total.toFixed(2)),
-            anticipoMinimo: parseFloat(anticipoMinimo.toFixed(2))
+            total: parseFloat(totalBeforeAdvance.toFixed(2)),
+            anticipoMinimo: parseFloat(anticipoMinimo.toFixed(2)),
+            advancePayment: parseFloat(finalAdvancePayment.toFixed(2)),
+            balance: parseFloat(balance.toFixed(2)),
+            isPaid: finalIsPaid
         };
     }
 

@@ -25,7 +25,7 @@ const User = sequelize.define('User', {
   },
   // ==================== INICIO DE LA MODIFICACIÓN ====================
   role: {
-    type: DataTypes.ENUM('Desarrollador', 'Dueño', 'Empleado', 'Administrador', 'Usuario'),
+    type: DataTypes.ENUM('Desarrollador', 'Dueño', 'Empleado'),
     allowNull: false,
     defaultValue: 'Empleado'
   },

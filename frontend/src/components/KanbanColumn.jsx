@@ -19,25 +19,25 @@ const KanbanColumn = ({ status, title, folios, color, onDrop, activeDrag }) => {
 
     return (
         <div
-            className="flex flex-col h-full min-w-[280px] w-80 bg-gray-800/5 backdrop-blur-sm rounded-xl border border-gray-200/50 overflow-hidden flex-shrink-0"
+            className="flex flex-col h-full min-w-[280px] w-80 bg-gray-100 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden flex-shrink-0"
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
-            {/* Header Estilo Pizarra */}
-            <div className={`p-3 border-b border-gray-200/50 ${color} bg-opacity-10 backdrop-blur-md`}>
+            {/* Header */}
+            <div className={`p-3 border-b border-gray-200 dark:border-slate-700 ${color.replace('bg-', 'bg-')} bg-opacity-10 dark:bg-opacity-20 backdrop-blur-md`}>
                 <div className="flex justify-between items-center">
-                    <h3 className={`font-bold text-gray-800 flex items-center gap-2`}>
+                    <h3 className={`font-bold text-gray-800 dark:text-white flex items-center gap-2`}>
                         <div className={`w-3 h-3 rounded-full ${color.replace('bg-', 'bg-').replace('bg-opacity-10', '')}`}></div>
                         {title}
                     </h3>
-                    <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold text-gray-600">
+                    <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full text-xs font-bold text-gray-600 dark:text-gray-300">
                         {filteredFolios.length}
                     </span>
                 </div>
             </div>
 
             {/* Cards Scroll Area */}
-            <div className="flex-1 p-3 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-3 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] bg-opacity-5">
+            <div className="flex-1 p-3 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-3 bg-gray-50/50 dark:bg-slate-900/50">
 
                 {filteredFolios.map((folio) => (
                     <div

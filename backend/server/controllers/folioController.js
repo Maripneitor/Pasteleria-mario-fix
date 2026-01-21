@@ -3,7 +3,7 @@ const path = require('path');
 const { format, parseISO, startOfWeek, endOfWeek, getDate, getMonth, lastDayOfMonth } = require('date-fns');
 const { es } = require('date-fns/locale');
 // Asegúrate que sequelize esté correctamente importado aquí desde ../models o ../config/database
-const { Folio, Client, User, FolioEditHistory, Commission, sequelize } = require('../models');
+const { Folio, Client, User, FolioEditHistory, Commission, sequelize, Flavor, Filling } = require('../models');
 const { Op } = require('sequelize');
 const pdfService = require('../services/pdfService');
 
@@ -70,10 +70,11 @@ exports.createFolio = async (req, res) => {
         }
 
         // Validaciones estrictas
-        const requiredFields = ['clientName', 'clientPhone', 'deliveryDate', 'total', 'advancePayment'];
+        const requiredFields = ['clientName', 'clientPhone', 'deliveryDate', 'total', 'advancePayment', 'folioType', 'persons', 'shape', 'designDescription'];
         const missingFields = requiredFields.filter(field => !req.body[field] && req.body[field] !== 0);
 
         if (missingFields.length > 0) {
+            console.warn(`⚠️ Intento de creación de folio fallido. Campos faltantes: ${missingFields.join(', ')}`);
             return res.status(400).json({
                 message: "Faltan campos obligatorios.",
                 missing: missingFields
@@ -85,6 +86,7 @@ exports.createFolio = async (req, res) => {
             return res.status(400).json({ message: "El total y el anticipo deben ser valores numéricos." });
         }
 
+        console.log(`📝 Iniciando creación de folio para cliente: ${clientName} (${clientPhone})`);
 
         // Buscar o crear cliente DENTRO de la transacción
         const [client, created] = await Client.findOrCreate({
@@ -92,6 +94,7 @@ exports.createFolio = async (req, res) => {
             defaults: { name: clientName, phone2: clientPhone2 || null }, // Usar null si no viene
             transaction: t // <= Usar la transacción local 't'
         });
+        console.log(`👤 Cliente ${created ? 'creado' : 'encontrado'}: ${client.id}`);
 
         // Actualizar phone2 si es diferente y el cliente ya existía
         if (!created && client.phone2 !== (clientPhone2 || null)) {
@@ -116,6 +119,7 @@ exports.createFolio = async (req, res) => {
             counter++;
             existingFolio = await Folio.findOne({ where: { folioNumber: finalFolioNumber }, transaction: t, lock: t.LOCK.UPDATE });
         }
+        console.log(`🔢 Folio asignado: ${finalFolioNumber}`);
 
         // Parsear y validar datos JSON de forma segura
         const additionalData = JSON.parse(additional || '[]');
@@ -126,6 +130,47 @@ exports.createFolio = async (req, res) => {
             : [];
         const complementsData = JSON.parse(complements || '[]');
         const cakeFlavorData = JSON.parse(cakeFlavor || '[]');
+
+        // --- VALIDACIÓN DE CATÁLOGO DINÁMICO (Sabores y Rellenos) ---
+        // Verificar que los sabores existan para este Owner o sean Globales
+        if (cakeFlavorData.length > 0) {
+            const flavorNames = cakeFlavorData.map(f => typeof f === 'string' ? f : f.name);
+            const validFlavors = await Flavor.findAll({
+                where: {
+                    name: flavorNames,
+                    [Op.or]: [{ ownerId: null }, { ownerId: finalOwnerId }]
+                },
+                attributes: ['name']
+            });
+            const validNames = validFlavors.map(v => v.name);
+            const invalidFlavors = flavorNames.filter(name => !validNames.includes(name));
+
+            if (invalidFlavors.length > 0) {
+                // Opción A: Bloquear
+                // return res.status(400).json({ message: `Sabores no válidos o no disponibles: ${invalidFlavors.join(', ')}` });
+                // Opción B: Warn (para no romper compatibilidad si frontend envía texto libre)
+                console.warn(`⚠️ Folio creado con sabores fuera de catálogo: ${invalidFlavors.join(', ')}`);
+            }
+        }
+
+        // Verificar Rellenos
+        if (fillingData.length > 0) {
+            const fillingNames = fillingData.map(f => f.name);
+            const validFillings = await Filling.findAll({
+                where: {
+                    name: fillingNames,
+                    [Op.or]: [{ ownerId: null }, { ownerId: finalOwnerId }]
+                },
+                attributes: ['name']
+            });
+            const validFillingNames = validFillings.map(v => v.name);
+            const invalidFillings = fillingNames.filter(name => !validFillingNames.includes(name));
+
+            if (invalidFillings.length > 0) {
+                console.warn(`⚠️ Folio creado con rellenos fuera de catálogo: ${invalidFillings.join(', ')}`);
+            }
+        }
+        // -----------------------------------------------------------
 
         // Calcular Totales usando FolioService (SIN MATEMÁTICAS AQUÍ)
         const calculationResult = await folioService.calculateFolioTotals({
@@ -186,7 +231,13 @@ exports.createFolio = async (req, res) => {
             hasExtraHeight: hasExtraHeight === 'true' || hasExtraHeight === true,
             hasExtraHeight: hasExtraHeight === 'true' || hasExtraHeight === true,
             status: status === 'Nuevo' ? 'Nuevo' : (folioData.status || 'Nuevo'), // Default a 'Nuevo'
-            ownerId: finalOwnerId // Persist Tenant ID
+            ownerId: finalOwnerId, // Persist Tenant ID
+            classification: {
+                priority: (new Date(deliveryDate) <= new Date(Date.now() + 172800000)) ? 'High' : 'Normal', // < 48h
+                valueLevel: (parseFloat(finalTotal) > 1000) ? 'High' : 'Standard',
+                urgency: (new Date(deliveryDate).toDateString() === new Date().toDateString() &&
+                    parseInt(folioData.deliveryTime?.split(':')[0]) - new Date().getHours() < 4) ? 'Urgent' : 'Normal'
+            }
         };
 
         // Crear el folio DENTRO de la transacción
@@ -408,6 +459,39 @@ exports.updateFolio = async (req, res) => {
             : [];
         const complementsData = JSON.parse(complements || '[]');
         const cakeFlavorData = JSON.parse(cakeFlavor || '[]');
+
+        // --- VALIDACIÓN DE CATÁLOGO DINÁMICO (Sabores y Rellenos) ---
+        // (Nota: En Update usamos el ownerId del folio existente)
+        const checkOwnerId = folio.ownerId;
+
+        if (cakeFlavorData.length > 0) {
+            const flavorNames = cakeFlavorData.map(f => typeof f === 'string' ? f : f.name);
+            const validFlavors = await Flavor.findAll({
+                where: {
+                    name: flavorNames,
+                    [Op.or]: [{ ownerId: null }, { ownerId: checkOwnerId }]
+                },
+                attributes: ['name']
+            });
+            const validNames = validFlavors.map(v => v.name);
+            const invalidFlavors = flavorNames.filter(name => !validNames.includes(name));
+            if (invalidFlavors.length > 0) console.warn(`⚠️ Update con sabores fuera de catálogo: ${invalidFlavors.join(', ')}`);
+        }
+
+        if (fillingData.length > 0) {
+            const fillingNames = fillingData.map(f => f.name);
+            const validFillings = await Filling.findAll({
+                where: {
+                    name: fillingNames,
+                    [Op.or]: [{ ownerId: null }, { ownerId: checkOwnerId }]
+                },
+                attributes: ['name']
+            });
+            const validFillingNames = validFillings.map(v => v.name);
+            const invalidFillings = fillingNames.filter(name => !validFillingNames.includes(name));
+            if (invalidFillings.length > 0) console.warn(`⚠️ Update con rellenos fuera de catálogo: ${invalidFillings.join(', ')}`);
+        }
+        // -----------------------------------------------------------
 
         // Recalcular costos usando FolioService
         const currentFolioType = folioData.folioType || folio.folioType;

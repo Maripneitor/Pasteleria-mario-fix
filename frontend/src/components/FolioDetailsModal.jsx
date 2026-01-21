@@ -4,7 +4,7 @@ import { X, Calendar, User, Phone, DollarSign, Clock, Cake, Layers, Sparkles } f
 import Lightbox from 'yet-another-react-lightbox';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import 'yet-another-react-lightbox/styles.css';
-import TypewriterLoader from './ui/TypewriterLoader';
+
 
 const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
     const [index, setIndex] = useState(-1);
@@ -149,9 +149,7 @@ const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
                                                 <p className="text-gray-600 text-sm mt-1 leading-relaxed bg-bakery-cream/30 p-3 rounded-lg border border-bakery-highlight relative z-10">
                                                     {folio.designDescription || "Sin descripción específica."}
                                                 </p>
-                                                <div className="absolute -top-6 -right-4 opacity-50 pointer-events-none transform scale-75">
-                                                    <TypewriterLoader />
-                                                </div>
+
                                             </div>
                                         </div>
                                     </div>

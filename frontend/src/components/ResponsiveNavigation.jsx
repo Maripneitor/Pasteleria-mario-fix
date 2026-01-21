@@ -4,7 +4,7 @@ import { LayoutDashboard, Calendar, MessageSquare, ClipboardList, PlusCircle, Lo
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import MinecraftSwitch from './ui/MinecraftSwitch';
+import Switch from './ui/Switch';
 
 const ResponsiveNavigation = () => {
     const { user, logout } = useAuth();
@@ -57,7 +57,7 @@ const ResponsiveNavigation = () => {
 
     // Sidebar Content (Reused for Desktop and Mobile Drawer)
     const SidebarContent = () => (
-        <div className="flex flex-col h-full bg-bakery-milk dark:bg-bakery-dark-surface transition-colors duration-300">
+        <div className="flex flex-col h-full bg-bakery-50 dark:bg-bakery-950 transition-colors duration-300">
             {/* Header */}
             <div className="p-6 flex items-center gap-3 border-b border-gray-100 dark:border-gray-800">
                 <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
@@ -76,8 +76,8 @@ const ResponsiveNavigation = () => {
                         to={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium border-l-4 ${isActive(item.href)
-                            ? 'bg-orange-50 text-orange-600 border-orange-500 dark:bg-bakery-burnt-wood dark:text-bakery-torch-fire dark:border-bakery-torch-fire dark:shadow-[0_0_15px_rgba(230,81,0,0.3)]'
-                            : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-bakery-dark-surface dark:hover:text-gray-200'
+                            ? 'bg-blue-50 text-blue-600 border-blue-500 dark:bg-bakery-800 dark:text-blue-400 dark:border-blue-500'
+                            : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-bakery-800 dark:hover:text-gray-200'
                             }`}
                     >
                         <item.icon size={20} />
@@ -102,7 +102,11 @@ const ResponsiveNavigation = () => {
 
                 {/* Dark Mode Toggle */}
                 <div className="flex justify-center py-4 border-t border-gray-100 dark:border-gray-800">
-                    <MinecraftSwitch checked={user?.theme === 'dark'} onChange={toggleTheme} />
+                    <Switch
+                        checked={user?.theme === 'dark'}
+                        onChange={toggleTheme}
+                        label={user?.theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro'}
+                    />
                 </div>
 
                 {/* Logout */}
@@ -114,7 +118,7 @@ const ResponsiveNavigation = () => {
                     Cerrar Sesión
                 </button>
             </div>
-        </div>
+        </div >
     );
 
     return (

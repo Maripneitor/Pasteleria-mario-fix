@@ -13,11 +13,16 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
     }
 
     // Role check - if allowedRoles is provided and not empty
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        // Redirect to a default authorized page or Unauthorized page
-        // For simplicity, sticking to the app's default /folios or just staying put (conceptually hard with Navigate)
-        // Let's redirect to /folios as a safe default for non-admins
-        return <Navigate to="/folios" replace />;
+    if (allowedRoles.length > 0) {
+        const userRole = user.role.toLowerCase();
+        const normalizedAllowed = allowedRoles.map(r => r.toLowerCase());
+
+        if (!normalizedAllowed.includes(userRole)) {
+            // Redirect to a default authorized page or Unauthorized page
+            // For simplicity, sticking to the app's default /folios or just staying put (conceptually hard with Navigate)
+            // Let's redirect to /folios as a safe default for non-admins
+            return <Navigate to="/folios" replace />;
+        }
     }
 
     return <Outlet />;
