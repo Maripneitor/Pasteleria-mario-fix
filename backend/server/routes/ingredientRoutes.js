@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const ingredientController = require('../controllers/ingredientController');
-const verifyToken = require('../middleware/authMiddleware');
+// Cambia 'verifyToken' por la desestructuración de 'authMiddleware'
+const { authMiddleware: verifyToken } = require('../middleware/authMiddleware');
 // const authorize = require('../middleware/roleMiddleware'); // Si se requiere restricción de rol
 
 // Rutas públicas para obtener listas (usadas en el formulario)

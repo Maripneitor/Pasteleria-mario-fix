@@ -90,13 +90,21 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
+  `phone` varchar(255) DEFAULT NULL, -- Campo faltante
   `password` varchar(255) NOT NULL,
-  `role` enum('Administrador', 'Usuario', 'Decorador') NOT NULL DEFAULT 'Usuario',
+  `role` enum('Desarrollador', 'Dueño', 'Empleado', 'Administrador') NOT NULL DEFAULT 'Empleado',
+  `ownerId` int DEFAULT NULL,
+  `dashboardConfig` json DEFAULT NULL,
+  `ownerSeal` text,
+  `status` enum('active', 'pending_verification', 'banned') DEFAULT 'active',
+  `permissions` json DEFAULT NULL,
+  `isActive` tinyint(1) NOT NULL DEFAULT '1',
+  `lastLoginAt` datetime DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE = InnoDB AUTO_INCREMENT = 2 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
 # ------------------------------------------------------------
 # DATA DUMP FOR TABLE: clients

@@ -24,11 +24,18 @@ const authMiddleware = (req, res, next) => {
 };
 
 // 2. Validar pertenencia a Sucursal (Multi-tenancy)
+// 2. Validar pertenencia a Sucursal (Multi-tenancy)
 const requireBranchMembership = async (req, res, next) => {
+  // SEGURIDAD: Validar que req.user exista antes de seguir
+  if (!req.user || !req.user.id) {
+    return apiResponse(res, 401, 'Sesión no válida para validar sucursal.', null, "AUTH_MISSING");
+  }
+
   const branchId = req.header('X-Branch-ID');
   if (!branchId) return apiResponse(res, 400, 'Contexto de sucursal (X-Branch-ID) requerido.', null, "BRANCH_REQUIRED");
 
   try {
+    const { UserBranchMembership } = require('../models');
     const membership = await UserBranchMembership.findOne({
       where: { user_id: req.user.id, branch_id: branchId }
     });
@@ -43,17 +50,23 @@ const requireBranchMembership = async (req, res, next) => {
 };
 
 // 3. Validar Permiso (RBAC)
+// 3. Validar Permiso (RBAC)
 const checkPermission = (permissionCode) => {
   return async (req, res, next) => {
+    // SEGURIDAD: Validar que req.user y req.tenant existan
+    if (!req.user || !req.user.id) {
+      return apiResponse(res, 401, 'Usuario no identificado.', null, "AUTH_REQUIRED");
+    }
+    if (!req.tenant || !req.tenant.branchId) {
+      return apiResponse(res, 400, 'Falta contexto de sucursal.', null, "TENANT_REQUIRED");
+    }
+
     try {
-      // Buscamos si el usuario tiene un rol con ese permiso en esta sucursal
-      // Esta lógica asume que las tablas roles/permissions están pobladas
-      const hasPermission = await User.findOne({
-        where: { id: req.user.id },
+      const { UserRole, Role, Permission } = require('../models');
+      const userHasPermission = await UserRole.findOne({
+        where: { user_id: req.user.id, branch_id: req.tenant.branchId },
         include: [{
           model: Role,
-          as: 'roles',
-          where: { branch_id: req.tenant.branchId },
           include: [{
             model: Permission,
             as: 'permissions',
@@ -62,10 +75,13 @@ const checkPermission = (permissionCode) => {
         }]
       });
 
-      if (!hasPermission) return apiResponse(res, 403, `Permiso insuficiente: ${permissionCode}`, null, "INSUFFICIENT_PERMISSIONS");
+      if (!userHasPermission) {
+        return apiResponse(res, 403, `Permiso insuficiente: ${permissionCode}`, null, "FORBIDDEN");
+      }
       next();
     } catch (error) {
-      return apiResponse(res, 500, 'Error validando permisos.');
+      console.error('❌ Error RBAC:', error);
+      return apiResponse(res, 500, 'Error de validación interna.');
     }
   };
 };

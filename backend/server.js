@@ -80,15 +80,12 @@ app.use('/api/ingredients', ingredientRoutes);
 // --- INICIO DEL SERVIDOR SEGURO ---
 // Eliminamos alter:true y migraciones manuales del código de arranque
 sequelize.authenticate().then(async () => {
-  console.log('✅ Conexión a la base de datos establecida correctamente.');
+  console.log('✅ Conexión a base de datos establecida. Sistema RBAC activo.');
 
-  // Ejecutamos seeders básicos de desarrollo
   await createDevUser();
   await ingredientController.seedIngredients();
 
   app.listen(PORT, () => {
     console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
   });
-}).catch(error => {
-  console.error('❌ Error fatal al conectar con la base de datos:', error);
-});
+}).catch(err => console.error('❌ Error fatal:', err));

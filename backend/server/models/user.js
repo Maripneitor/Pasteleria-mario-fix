@@ -51,12 +51,7 @@ const User = sequelize.define('User', {
     allowNull: true,
     comment: 'URL or base64 of the custom seal for folios'
   },
-  status: {
-    type: DataTypes.ENUM('active', 'pending_verification', 'banned'),
-    allowNull: false,
-    defaultValue: 'active',
-    comment: 'Status: active, pending_verification, banned'
-  },
+  /* role field removed in favor of UserRole table */
   permissions: {
     type: DataTypes.JSON,
     allowNull: true,

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const aiSessionController = require('../controllers/aiSessionController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { authMiddleware } = require('../middleware/authMiddleware');
 
 // Protegemos todas las rutas de sesiones con autenticación
 router.use(authMiddleware);
