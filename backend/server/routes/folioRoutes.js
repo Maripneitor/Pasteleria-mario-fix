@@ -3,7 +3,8 @@ const router = express.Router();
 const path = require('path');
 const multer = require('multer');
 const folioController = require('../controllers/folioController');
-const { checkPermission } = require('../middleware/authMiddleware');
+// CAMBIO: Importa las herramientas del nuevo sistema RBAC
+const { authMiddleware, checkPermission } = require('../middleware/authMiddleware');
 
 // Configuración de Multer: Disk Storage para evitar desbordamiento de memoria (DoS)
 const storage = multer.diskStorage({
@@ -32,6 +33,9 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
+// CAMBIO: Asegúrate de que router.use reciba la función extraída
+router.use(authMiddleware);
+
 // --- RUTA PARA PDFs MASIVOS (ETIQUETAS Y COMANDAS) ---
 router.get('/day-summary-pdf', checkPermission('folios.read'), folioController.generateDaySummaryPdf);
 
@@ -39,7 +43,8 @@ router.get('/day-summary-pdf', checkPermission('folios.read'), folioController.g
 router.get('/cash-close', checkPermission('cashclose.read'), folioController.getCashClose);
 
 // --- RUTA PARA OBTENER ESTADÍSTICAS (SÓLO ADMIN) ---
-router.get('/statistics', checkPermission('folios.stats.read'), folioController.getStatistics);
+// CAMBIO: Reemplaza authorize() por checkPermission() según tu nuevo plan
+router.get('/statistics', checkPermission('reports.view'), folioController.getStatistics);
 
 // --- RUTA PARA ESTADÍSTICAS DE PRODUCTIVIDAD (SÓLO ADMIN) ---
 router.get('/productivity', checkPermission('folios.stats.read'), folioController.getProductivityStats);

@@ -77,26 +77,18 @@ app.use('/api/test', testRoutes);
 app.use('/api/dictation', dictationRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 
-// --- INICIO DEL SERVIDOR ---
-// Nota: Se ha eliminado sequelize.sync({ alter: true }) para evitar Schema Drift.
-// Las migraciones deben manejarse externamente.
+// --- INICIO DEL SERVIDOR SEGURO ---
+// Eliminamos alter:true y migraciones manuales del código de arranque
 sequelize.authenticate().then(async () => {
-  console.log('✅ Base de datos conectada.');
+  console.log('✅ Conexión a la base de datos establecida correctamente.');
 
+  // Ejecutamos seeders básicos de desarrollo
   await createDevUser();
-
-  // Keep Alive Logic
-  process.on('uncaughtException', (err) => {
-    console.error('🔥 UNCAUGHT PREVENTED:', err);
-  });
-
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('🚫 UNHANDLED REJECTION:', reason);
-  });
+  await ingredientController.seedIngredients();
 
   app.listen(PORT, () => {
-    console.log(`🚀 Servidor escuchando en puerto ${PORT} con seguridad reforzada.`);
+    console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
   });
 }).catch(error => {
-  console.error('❌ Error al conectar con la base de datos:', error);
+  console.error('❌ Error fatal al conectar con la base de datos:', error);
 });

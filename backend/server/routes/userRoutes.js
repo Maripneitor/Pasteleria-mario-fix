@@ -1,23 +1,21 @@
+// backend/server/routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const authMiddleware = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
 
-// Aplicamos autenticación y autorización de Administrador a todas las rutas de este archivo
-router.use(authMiddleware, authorize('Administrador'));
+// CAMBIO: Importación desestructurada
+const { authMiddleware, checkPermission } = require('../middleware/authMiddleware');
 
-// Rutas para la colección de usuarios (/api/users)
+// CAMBIO: Aplicamos el middleware de autenticación extraído
+router.use(authMiddleware);
+
+// Rutas protegidas por permisos de gestión de usuarios
 router.route('/')
-    .get(userController.getAllUsers)
-    .post(userController.createUser);
+    .get(checkPermission('users.manage'), userController.getAllUsers)
+    .post(checkPermission('users.manage'), userController.createUser);
 
-// Rutas para un usuario específico (/api/users/:id)
 router.route('/:id')
-    .put(userController.updateUser)
-    .delete(userController.deleteUser);
-
-// Ruta específica para cambio de rol/estatus por Admin
-router.put('/update-role/:id', userController.updateUserRole);
+    .put(checkPermission('users.manage'), userController.updateUser)
+    .delete(checkPermission('users.manage'), userController.deleteUser);
 
 module.exports = router;

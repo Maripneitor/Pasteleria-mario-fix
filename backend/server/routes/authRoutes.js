@@ -9,7 +9,8 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 
 // Ruta para generar invitación (Protegida)
-const authMiddleware = require('../middleware/authMiddleware'); // Import middleware
+// CAMBIO: Usa desestructuración para obtener la función específica del objeto
+const { authMiddleware } = require('../middleware/authMiddleware'); // Import middleware
 router.post('/generate-invite', authMiddleware, authController.generateInviteToken);
 
 module.exports = router;

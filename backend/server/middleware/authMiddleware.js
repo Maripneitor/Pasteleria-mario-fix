@@ -1,123 +1,73 @@
-const { User, UserBranchMembership, UserRole, Role, Permission, Branch } = require('../models');
+const jwt = require('jsonwebtoken');
+const { User, UserBranchMembership, Role, Permission } = require('../models');
+const apiResponse = require('../utils/apiResponse');
 
-/**
- * Middleware factory to check if a user has a specific permission.
- * It assumes a previous middleware (like JWT auth) has populated req.user.
- * 
- * It also checks or sets the current Branch context:
- * - Ideally, the client sends 'X-Branch-ID' header.
- * - If not, we try to infer it or require it.
- * 
- * @param {string} permissionCode - The code of the permission to check (e.g. 'folios.create')
- */
+// 1. Validar JWT e inyectar usuario
+const authMiddleware = (req, res, next) => {
+  let token;
+  const authHeader = req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) return apiResponse(res, 401, 'Token no proporcionado.', null, "AUTH_REQUIRED");
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Contiene id, email, etc.
+    next();
+  } catch (error) {
+    return apiResponse(res, 401, 'Token inválido o expirado.', null, "TOKEN_INVALID");
+  }
+};
+
+// 2. Validar pertenencia a Sucursal (Multi-tenancy)
+const requireBranchMembership = async (req, res, next) => {
+  const branchId = req.header('X-Branch-ID');
+  if (!branchId) return apiResponse(res, 400, 'Contexto de sucursal (X-Branch-ID) requerido.', null, "BRANCH_REQUIRED");
+
+  try {
+    const membership = await UserBranchMembership.findOne({
+      where: { user_id: req.user.id, branch_id: branchId }
+    });
+
+    if (!membership) return apiResponse(res, 403, 'No perteneces a esta sucursal.', null, "FORBIDDEN_BRANCH");
+
+    req.tenant = { branchId: parseInt(branchId, 10) };
+    next();
+  } catch (error) {
+    return apiResponse(res, 500, 'Error validando sucursal.');
+  }
+};
+
+// 3. Validar Permiso (RBAC)
 const checkPermission = (permissionCode) => {
   return async (req, res, next) => {
     try {
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({ message: 'Unauthorized: No user found' });
-      }
-
-      const branchIdProp = req.headers['x-branch-id'] || req.body.branchId || req.query.branchId;
-
-      // If the permission is global (like 'organizations.create'), we might not need a branch.
-      // But for this system context, most logic is branch-scoped.
-
-      let branchId = branchIdProp ? parseInt(branchIdProp) : null;
-
-      // 1. Fetch User Roles and Permissions
-      // We need to see if the user has a Role that grants this Permission,
-      // AND if that Role is assigned to the user for the current Branch (or is Global).
-
-      const userRoles = await UserRole.findAll({
-        where: { userId: req.user.id },
-        include: [
-          {
-            model: Role,
-            include: [{
-              model: Permission,
-              as: 'permissions',
-              where: { code: permissionCode }
-            }]
-          }
-        ]
+      // Buscamos si el usuario tiene un rol con ese permiso en esta sucursal
+      // Esta lógica asume que las tablas roles/permissions están pobladas
+      const hasPermission = await User.findOne({
+        where: { id: req.user.id },
+        include: [{
+          model: Role,
+          as: 'roles',
+          where: { branch_id: req.tenant.branchId },
+          include: [{
+            model: Permission,
+            as: 'permissions',
+            where: { code: permissionCode }
+          }]
+        }]
       });
 
-      // Filter roles that are valid for the context
-      // A role is valid if:
-      // - Role scope is 'Global'
-      // - OR Role scope is 'Branch' AND UserRole.branchId matches current branchId
-
-      const hasValidRole = userRoles.some(ur => {
-        const role = ur.Role;
-        if (!role) return false;
-
-        // Check if role actually has the permission (inner join should ensure this but just in case)
-        const hasPerm = role.permissions && role.permissions.length > 0;
-        if (!hasPerm) return false;
-
-        if (role.scope === 'Global') return true;
-
-        if (role.scope === 'Branch') {
-          // If scope is branch, we MUST have a branchId in request context 
-          // AND the assignment must match that branch.
-          if (!branchId) return false;
-          return ur.branchId === branchId;
-        }
-
-        return false;
-      });
-
-      if (hasValidRole) {
-        // Attach branchId to req for controllers to use
-        if (branchId) req.branchId = branchId;
-        return next();
-      }
-
-      return res.status(403).json({
-        message: `Forbidden: You do not have the required permission '${permissionCode}'`
-      });
-
+      if (!hasPermission) return apiResponse(res, 403, `Permiso insuficiente: ${permissionCode}`, null, "INSUFFICIENT_PERMISSIONS");
+      next();
     } catch (error) {
-      console.error('RBAC Error:', error);
-      return res.status(500).json({ message: 'Internal Server Error during authorization' });
+      return apiResponse(res, 500, 'Error validando permisos.');
     }
   };
 };
 
-/**
- * Middleware to verify simple membership to a branch.
- * Does not check granular permissions, just if they are "inside" the branch.
- */
-const requireBranchMembership = async (req, res, next) => {
-  try {
-    const branchId = req.headers['x-branch-id'] || req.body.branchId || req.query.branchId;
-
-    if (!branchId) {
-      return res.status(400).json({ message: 'Branch ID is required (X-Branch-ID header)' });
-    }
-
-    const membership = await UserBranchMembership.findOne({
-      where: {
-        userId: req.user.id,
-        branchId: branchId
-      }
-    });
-
-    if (!membership) {
-      return res.status(403).json({ message: 'Access Denied: You are not a member of this branch' });
-    }
-
-    req.branchId = parseInt(branchId);
-    req.membership = membership;
-    next();
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error checking membership' });
-  }
-};
-
-module.exports = {
-  checkPermission,
-  requireBranchMembership
-};
+module.exports = { authMiddleware, requireBranchMembership, checkPermission };
