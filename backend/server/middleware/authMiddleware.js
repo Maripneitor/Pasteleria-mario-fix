@@ -1,46 +1,43 @@
 const jwt = require('jsonwebtoken');
+const apiResponse = require('../utils/apiResponse');
 
 module.exports = function (req, res, next) {
   let token;
   const authHeader = req.header('Authorization');
 
-  // 1. Intentamos obtener el token del encabezado 'Authorization' (método estándar)
+  // 1. Intentamos obtener el token del encabezado 'Authorization'
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
   }
-  // 2. Si no hay token en el encabezado, buscamos en los parámetros de la URL (para enlaces como el del PDF)
+  // 2. Fallback: Query params (ej. PDF links)
   else if (req.query.token) {
     token = req.query.token;
   }
 
-  // 3. Si no se encuentra un token en ninguno de los dos lugares, denegamos el acceso.
+  // 3. Validación inicial de existencia
   if (!token) {
-    return res.status(401).json({ code: "AUTH_REQUIRED", message: 'Acceso denegado. No se proporcionó un token.' });
+    return apiResponse(res, 401, 'Acceso denegado. No se proporcionó un token.', null, "AUTH_REQUIRED");
   }
 
-  // LOG PARA DEPURAR EL OJO DE DIOS
-  console.log('Token recibido:', token);
-
   try {
-    // 4. Verificamos que el token sea válido usando la clave secreta.
+    // 4. Verificación del token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 5. Si es válido, guardamos los datos del usuario en el objeto de la petición para uso posterior.
+    // 5. Inyectar usuario en request
     req.user = decoded;
 
-    // 6. Permitimos que la petición continúe hacia el controlador correspondiente.
     next();
   } catch (error) {
-    // Si la verificación falla (token inválido o expirado), devolvemos un error específico.
+    // Manejo específico de errores JWT
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ code: "AUTH_REQUIRED", message: "Sesión expirada" });
-    } else if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ code: "AUTH_REQUIRED", message: "Token no válido" });
+      return apiResponse(res, 401, 'Sesión expirada. Por favor inicie sesión nuevamente.', null, "TOKEN_EXPIRED");
     }
 
-    // Fallback error
-    // Fallback error
+    if (error.name === 'JsonWebTokenError') {
+      return apiResponse(res, 401, 'Token inválido o corrupto.', null, "TOKEN_INVALID");
+    }
+
     console.error("Error validando token:", error);
-    res.status(401).json({ code: "AUTH_REQUIRED", message: 'Sesión inválida o token corrupto.' });
+    return apiResponse(res, 500, 'Error interno validando la sesión.', null, "AUTH_ERROR");
   }
 };

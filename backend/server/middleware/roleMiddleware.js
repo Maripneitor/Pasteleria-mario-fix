@@ -1,25 +1,38 @@
-// Este middleware se usa DESPUÉS del de autenticación.
-// Su trabajo es verificar si el usuario tiene el rol necesario.
+const apiResponse = require('../utils/apiResponse');
+const LoggerService = require('../services/loggerService');
 
 function authorize(roles = []) {
-  // Si 'roles' es un string, lo convertimos en un array para que sea más flexible
   if (typeof roles === 'string') {
     roles = [roles];
   }
 
-  return (req, res, next) => {
-    // Verificamos si el rol del usuario (que viene del token) está en la lista de roles permitidos.
-    // Hacemos la comparación case-insensitive para evitar dolores de cabeza
-    const userRole = req.user.role.toLowerCase();
-    const allowedRoles = roles.map(r => r.toLowerCase());
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        await LoggerService.security('Auth', 'Intento de acceso sin usuario autenticado en ruta protegida', {
+          path: req.originalUrl,
+          ip: req.ip
+        });
+        return apiResponse(res, 401, 'Usuario no autenticado.', null, "AUTH_REQUIRED");
+      }
 
-    if (!req.user || !allowedRoles.includes(userRole)) {
-      // Si no hay usuario o su rol no está permitido, denegamos el acceso.
-      return res.status(403).json({ message: 'No tienes permiso para realizar esta acción.' });
+      const userRole = req.user.role ? req.user.role.toLowerCase() : 'unknown';
+      const allowedRoles = roles.map(r => r.toLowerCase());
+
+      if (roles.length && !allowedRoles.includes(userRole)) {
+        await LoggerService.security('AccessControl', `Acceso denegado: Rol '${userRole}' intentó acceder a recurso protegido`, {
+          requiredRoles: allowedRoles,
+          userId: req.user.id,
+          path: req.originalUrl
+        });
+        return apiResponse(res, 403, 'No tienes permiso para realizar esta acción.', null, "ACCESS_DENIED");
+      }
+
+      next();
+    } catch (error) {
+      console.error("Error en middleware de autorización:", error);
+      return apiResponse(res, 500, 'Error interno de autorización.');
     }
-
-    // Si tiene el permiso, la petición continúa hacia el controlador.
-    next();
   };
 }
 
