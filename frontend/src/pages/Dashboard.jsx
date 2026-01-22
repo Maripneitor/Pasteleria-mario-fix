@@ -15,10 +15,10 @@ import api from '../services/api';
 import { DollarSign, Package, Clock, PlusCircle, Calendar as CalendarIcon, UserPlus, FileText, CheckCircle } from 'lucide-react';
 
 const Dashboard = () => {
-    const { user } = useAuth();
+    const { user, currentBranch, hasPermission } = useAuth();
     const navigate = useNavigate();
 
-    // Role definition must be before hooks that rely on it (like useEffect dependency arrays)
+    // Role definition for display purposes only
     const role = user?.role || 'Guest';
 
     const [inviteToken, setInviteToken] = React.useState(null);
@@ -36,7 +36,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchStats = async () => {
-            if (role === 'Administrador' || role === 'Dueño' || role === 'Vendedor') {
+            if (hasPermission('dashboard.view_stats')) {
                 try {
                     const response = await api.get('/dashboard/daily-summary');
                     setDailyStats({
@@ -51,20 +51,28 @@ const Dashboard = () => {
                 } finally {
                     setLoadingStats(false);
                 }
+            } else {
+                setLoadingStats(false);
             }
         };
 
-        fetchStats();
-    }, [role]);
+        if (user && currentBranch) {
+            fetchStats();
+        }
+    }, [user, currentBranch, hasPermission]);
 
     const generateInvite = async () => {
+        if (!hasPermission('users.invite')) {
+            alert("No tienes permiso para invitar usuarios.");
+            return;
+        }
         try {
             const response = await api.post('/auth/generate-invite');
             setInviteToken(response.data.token);
             setShowQrModal(true);
         } catch (error) {
             console.error("Error generating invite:", error);
-            alert("Error generando invitación. Solo dueños pueden hacerlo.");
+            alert("Error generando invitación.");
         }
     };
 
@@ -138,7 +146,7 @@ const Dashboard = () => {
                     <QuickActionBar role={role} />
 
                     {/* Role Based Content - Cleaned Up */}
-                    {role === 'Administrador' && (
+                    {hasPermission('dashboard.view_stats') && (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                             {/* Stats Column */}
                             <div className="lg:col-span-8 space-y-8">
@@ -183,7 +191,7 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {(role === 'Vendedor' || role === 'Dueño' || role === 'Empleado') && (
+                    {(hasPermission('folios.create') || hasPermission('calendar.view')) && (
                         <div className="space-y-6">
                             <motion.div
                                 className="grid grid-cols-1 md:grid-cols-2 gap-6"
@@ -203,8 +211,7 @@ const Dashboard = () => {
                                     onClick={() => navigate('/calendario')}
                                     icon={<CalendarIcon className="w-8 h-8 text-white" />}
                                 />
-                                {/* OWNER ONLY ACTION */}
-                                {role === 'Dueño' && (
+                                {hasPermission('users.invite') && (
                                     <>
                                         <DashboardAction
                                             title="Registrar Empleado"
@@ -246,7 +253,7 @@ const Dashboard = () => {
                             </motion.div>
 
                             {/* CASH CLOSING - CHALKBOARD */}
-                            {(role === 'Dueño' || role === 'Vendedor') && (
+                            {(hasPermission('cash.close') || hasPermission('dashboard.view_stats')) && (
                                 <motion.div variants={letterVariants}>
                                     <CashClosing />
                                 </motion.div>
@@ -258,7 +265,7 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {role === 'Repostero' && (
+                    {hasPermission('production.view') && (
                         <motion.div className="max-w-3xl mx-auto space-y-10" variants={containerVariants}>
                             {/* Production Item 1 */}
                             <ProductionItem

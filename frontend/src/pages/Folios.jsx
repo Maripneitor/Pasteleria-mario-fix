@@ -22,7 +22,7 @@ const Folios = () => {
     const [signingFolio, setSigningFolio] = useState(null); // Folio being signed
     const [selectedFolio, setSelectedFolio] = useState(null); // Folio for Details
 
-    const { user } = useAuth();
+    const { user, currentBranch } = useAuth();
     // Form State
     const [formData, setFormData] = useState({
         clientName: '',
@@ -50,10 +50,10 @@ const Folios = () => {
     };
 
     useEffect(() => {
-        if (user) {
+        if (user && currentBranch) {
             fetchFolios();
         }
-    }, [user]);
+    }, [user, currentBranch]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;

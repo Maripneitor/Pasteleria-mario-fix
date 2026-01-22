@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Search, Star } from 'lucide-react';
-import { mockClients } from '../utils/mockData';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Clients = () => {
-    // Ensure data exists
-    const clients = mockClients || [];
+    const { user, currentBranch } = useAuth();
+    const [clients, setClients] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchClients = async () => {
+            try {
+                const response = await api.get('/clients');
+                setClients(response.data || []);
+            } catch (error) {
+                console.error("Error al cargar clientes:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user && currentBranch) {
+            fetchClients();
+        }
+    }, [user, currentBranch]);
 
     return (
         <div className="p-6 min-h-screen bg-gray-50 dark:bg-bakery-950 transition-colors">

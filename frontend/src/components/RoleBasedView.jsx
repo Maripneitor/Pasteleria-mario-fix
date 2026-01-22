@@ -1,13 +1,19 @@
 import { useAuth } from '../context/AuthContext';
+import PropTypes from 'prop-types';
 
-const RoleBasedView = ({ allowedRoles, children }) => {
-    const { user } = useAuth();
+const RoleBasedView = ({ permission, children }) => {
+    const { hasPermission } = useAuth();
 
-    if (!user || !allowedRoles.includes(user.role)) {
+    if (!hasPermission(permission)) {
         return null;
     }
 
     return children;
+};
+
+RoleBasedView.propTypes = {
+    permission: PropTypes.string.isRequired,
+    children: PropTypes.node
 };
 
 export default RoleBasedView;

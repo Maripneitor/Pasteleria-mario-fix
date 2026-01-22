@@ -6,6 +6,9 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [currentBranch, setCurrentBranch] = useState(null);
+    const [userPermissions, setUserPermissions] = useState([]);
+    const [availableBranches, setAvailableBranches] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Decode token helper
@@ -19,28 +22,43 @@ export const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        // Check local storage on boot
+        // Inicializar estado desde localStorage
         const token = localStorage.getItem('token');
+        const storedBranchId = localStorage.getItem('branch_id');
+        const storedPermissions = localStorage.getItem('permissions');
+        const storedUser = localStorage.getItem('user_data');
+        const storedBranches = localStorage.getItem('available_branches');
+
         if (token) {
             const decoded = decodeToken(token);
-            if (decoded) {
-                // Determine role safely and force lowercase
-                const rawRole = decoded.role || decoded.user_role || '';
-                const role = String(rawRole).toLowerCase();
+            if (decoded && decoded.exp * 1000 > Date.now()) {
+                // Restaurar usuario
+                if (storedUser) setUser(JSON.parse(storedUser));
 
-                // Construct user object explicitly
-                const userObj = {
-                    ...decoded,
-                    token,
-                    role: role
-                };
+                // Restaurar permisos
+                if (storedPermissions) setUserPermissions(JSON.parse(storedPermissions));
 
-                setUser(userObj);
+                // Restaurar ramas disponibles
+                let branches = [];
+                if (storedBranches) {
+                    branches = JSON.parse(storedBranches);
+                    setAvailableBranches(branches);
+                }
 
-                // Set default axios header immediately
+                // Restaurar rama activa
+                if (storedBranchId && branches.length > 0) {
+                    const activeBranch = branches.find(b => String(b.id) === String(storedBranchId));
+                    if (activeBranch) setCurrentBranch(activeBranch);
+                } else if (branches.length > 0) {
+                    // Fallback a la primera si no hay seleccionada persistida
+                    setCurrentBranch(branches[0]);
+                    localStorage.setItem('branch_id', branches[0].id);
+                }
+
+                // Configurar header por defecto
                 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             } else {
-                console.warn("Token invalid on boot, forcing logout.");
+                console.warn("Token expirado o inválido al iniciar. Logout.");
                 logout();
             }
         }
@@ -48,81 +66,111 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
-        const response = await api.post('/auth/login', { email, password });
+        try {
+            const response = await api.post('/auth/login', { email, password });
 
-        // Backend now returns { user: {...}, token }
-        // Fallback to old structure just in case backend isn't deployed yet 
-        const token = response.data.token;
-        const userData = response.data.user || decodeToken(token); // Fallback to decode if user obj missing
+            // Estructura esperada de respuesta:
+            // { token, user, permissions, branches, defaultBranch }
+            const { token, user, permissions, branches, defaultBranch } = response.data;
 
-        if (!token) throw new Error("No token received");
+            if (!token) throw new Error("No token received");
 
-        localStorage.setItem('token', token);
+            // 1. Guardar Token
+            localStorage.setItem('token', token);
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        // Persist minimal user info if needed, but for now we rely on AuthContext state
-        // and token decoding on refresh. 
-        // Actually, let's keep it simple: Token is the source of truth for persistence.
+            // 2. Guardar Usuario
+            localStorage.setItem('user_data', JSON.stringify(user));
+            setUser(user);
 
-        // Set global header
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            // 3. Guardar Permisos
+            localStorage.setItem('permissions', JSON.stringify(permissions || []));
+            setUserPermissions(permissions || []);
 
-        // Construct final user object matching what we want in state
-        const rawRole = userData.role || userData.user_role || (decodeToken(token)?.role) || '';
-        const role = String(rawRole).toLowerCase();
-        const userObj = { ...userData, token, role };
-        setUser(userObj);
+            // 4. Guardar Ramas y Rama por Defecto
+            const validBranches = branches || [];
+            localStorage.setItem('available_branches', JSON.stringify(validBranches));
+            setAvailableBranches(validBranches);
 
-        return userObj;
+            // Determinar rama inicial
+            const initialBranch = defaultBranch || validBranches[0];
+            if (initialBranch) {
+                localStorage.setItem('branch_id', initialBranch.id);
+                localStorage.setItem('current_branch_id', initialBranch.id);
+                setCurrentBranch(initialBranch);
+            }
+
+            return user;
+        } catch (error) {
+            console.error("Login error:", error);
+            throw error;
+        }
     };
 
-    // --- DEBUG LOGIN FOR DEV ONLY ---
-    const debugLogin = (role = 'Desarrollador') => {
-        if (!import.meta.env.DEV) return;
-        const mockToken = "DEBUG_TOKEN_" + Date.now(); // This won't work with real backend middleware
-        localStorage.setItem('token', mockToken);
-        const userObj = {
-            id: 9999,
-            username: "Dev User",
-            email: "dev@pasteleria.com",
-            role: role,
-            ownerId: null, // Root
-            status: 'active',
-            token: mockToken
-        };
-        setUser(userObj);
-        window.location.reload();
+    const switchBranch = (branchId) => {
+        const branch = availableBranches.find(b => String(b.id) === String(branchId));
+        if (branch) {
+            console.log(`Cambiando de sucursal a: ${branch.name}`);
+            localStorage.setItem('branch_id', branch.id);
+            localStorage.setItem('current_branch_id', branch.id);
+            setCurrentBranch(branch);
+            // La recarga de datos debe ser manejada por los componentes que dependen de 'currentBranch'
+            // Opcionalmente podemos forzar un reload si la app no es reactiva completamente
+            // window.location.reload(); 
+        } else {
+            console.error("Sucursal no encontrada");
+        }
     };
 
-    const register = async (userData) => {
-        const response = await api.post('/auth/register', userData);
-        return response.data;
-    };
-
-    /**
-     * Logout robusto:
-     * 1. Limpia localStorage
-     * 2. Limpia estado React
-     * 3. Limpia headers Axios
-     * 4. Redirección imperativa
-     */
     const logout = () => {
-        console.log("Ejecutando logout robusto...");
-        // a) Limpiar localStorage
+        console.log("Ejecutando logout...");
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        localStorage.removeItem('branch_id');
+        localStorage.removeItem('permissions');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('available_branches');
 
-        // b) Settear 'user' a null
         setUser(null);
+        setCurrentBranch(null);
+        setUserPermissions([]);
+        setAvailableBranches([]);
 
-        // c) Eliminar headers de Authorization en Axios
         delete api.defaults.headers.common['Authorization'];
-
-        // d) window.location.href = '/login' (para purgar el árbol de componentes)
         window.location.href = '/login';
     };
 
+    // Función auxiliar para verificar permisos en la UI
+    const hasPermission = (permissionRequired) => {
+        if (!permissionRequired) return true;
+        return userPermissions.includes(permissionRequired);
+    };
+
+    // Helper para etiqueta amigable de rol (basado en permisos o rol legacy)
+    const getUserRoleLabel = () => {
+        if (userPermissions.includes('admin.access')) return 'Administrador Global';
+        if (userPermissions.includes('owners.manage')) return 'Dueño de Franquicia';
+        if (userPermissions.includes('production.view')) return 'Equipo de Cocina';
+        if (userPermissions.includes('folios.create')) return 'Vendedor de Sucursal';
+
+        // Fallback a rol legacy si existe
+        if (user?.role) return user.role;
+
+        return 'Usuario';
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, register, loading, debugLogin }}>
+        <AuthContext.Provider value={{
+            user,
+            currentBranch,
+            userPermissions,
+            availableBranches,
+            loading,
+            login,
+            logout,
+            switchBranch,
+            hasPermission,
+            getUserRoleLabel
+        }}>
             {!loading && children}
         </AuthContext.Provider>
     );

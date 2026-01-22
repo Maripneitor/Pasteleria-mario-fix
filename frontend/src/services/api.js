@@ -7,12 +7,18 @@ const api = axios.create({
     },
 });
 
-// Interceptor para agregar el token a cada petición
+// Interceptor para agregar el token y la sucursal a cada petición
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Inyectar X-Branch-ID (Case Sensitive preference)
+        const branchId = localStorage.getItem('branch_id');
+        if (branchId) {
+            config.headers['X-Branch-ID'] = branchId;
         }
 
         // [DEV-ONLY] Capturar email en intentos de login para debugging
@@ -27,27 +33,41 @@ api.interceptors.request.use(
     }
 );
 
-// Interceptor de RESPUESTA para manejar errores de sesión (AUTH_REQUIRED)
+// Interceptor de RESPUESTA para manejar errores de sesión (AUTH_REQUIRED) y RBAC
 api.interceptors.response.use(
     (response) => {
         return response;
     },
     (error) => {
-        // Disparar evento para SystemLogContext (incluso si no estamos en React Tree)
+        const status = error.response ? error.response.status : null;
+
+        // Custom Event for System Logs
         if (error.response) {
-            const isAuthError = error.response.status === 401 || error.response.status === 403;
+            const isAuthError = status === 401 || status === 403;
             const event = new CustomEvent('system-log-event', {
                 detail: {
-                    level: isAuthError ? 'ERROR' : 'WARN', // Auth errors are critical/orange
-                    message: `API Error: ${error.response.status} ${error.response.data?.code || ''}`,
+                    level: isAuthError ? 'ERROR' : 'WARN',
+                    message: `API Error: ${status} ${error.response.data?.code || ''}`,
                     data: {
                         url: error.config?.url,
-                        status: error.response.status,
+                        status: status,
                         serverMessage: error.response.data?.message || 'Unknown error'
                     }
                 }
             });
             window.dispatchEvent(event);
+        }
+
+        // Manejo Visual de Errores (Toast)
+        if (status === 403) {
+            const toastEvent = new CustomEvent('toast-message', {
+                detail: {
+                    type: 'error',
+                    title: 'Acceso Denegado',
+                    message: 'No tienes permiso para realizar esta acción o acceder a este recurso.'
+                }
+            });
+            window.dispatchEvent(toastEvent);
         }
 
         if (error.response && error.response.status === 401) {
