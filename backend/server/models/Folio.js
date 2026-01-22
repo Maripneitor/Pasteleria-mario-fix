@@ -4,8 +4,7 @@ const { sequelize } = require('../config/database');
 const Folio = sequelize.define('Folio', {
   folioNumber: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
   ownerId: {
     type: DataTypes.INTEGER,
@@ -134,7 +133,24 @@ const Folio = sequelize.define('Folio', {
     type: DataTypes.JSON,
     allowNull: true,
     comment: 'Auto-calculated classification: { priority, urgency, valueLevel }'
+  },
+  branchId: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+    field: 'branch_id'
   }
-}, { tableName: 'folios' });
+}, {
+  tableName: 'folios',
+  indexes: [
+    {
+      unique: true,
+      fields: ['branch_id', 'folioNumber'],
+      name: 'uq_folios_number_branch'
+    },
+    {
+      fields: ['branch_id']
+    }
+  ]
+});
 
 module.exports = Folio;

@@ -24,15 +24,21 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   // ==================== INICIO DE LA MODIFICACIÓN ====================
-  role: {
-    type: DataTypes.ENUM('Desarrollador', 'Dueño', 'Empleado'),
+  isActive: {
+    type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: 'Empleado'
+    defaultValue: true,
+    field: 'is_active'
+  },
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_login_at'
   },
   ownerId: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    comment: 'ID of the Owner user this user belongs to. If null and role is Owner, they are the root.'
+    comment: 'Legacy field. Use UserBranchMembership for multi-tenant structure.'
   },
   dashboardConfig: {
     type: DataTypes.JSON,
@@ -58,7 +64,8 @@ const User = sequelize.define('User', {
     comment: 'Granular permissions override'
   }
 }, {
-  tableName: 'users'
+  tableName: 'users',
+  timestamps: true // Ensure timestamps are enabled as per SQL schema recommendation
 });
 
 module.exports = User;
