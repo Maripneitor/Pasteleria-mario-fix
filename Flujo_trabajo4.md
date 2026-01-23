@@ -3,14 +3,15 @@
 ## 🐳 Gestión de Docker
 Usa estos comandos para controlar el entorno de contenedores (Base de Datos, Backend y Frontend).
 
-### Inicio rápido (en segundo plano):
-```bash
 docker-compose up -d
 ```
+### apagar
+```bash
+docker-compose down
+```
+
 
 ### Reconstrucción total (Obligatorio tras cambios en modelos o dependencias):
-```bash
-docker-compose up --build
 ```
 
 ### Limpieza profunda (Borra base de datos y archivos temporales):

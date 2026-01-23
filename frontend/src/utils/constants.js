@@ -34,6 +34,7 @@ export const mockOrders = [
     {
         id: 'ORD-001',
         customer: 'Juan Pérez',
+        avatar: 'https://i.pravatar.cc/150?u=juan',
         items: 'Pastel de Chocolate, 2 Cupcakes',
         total: 450.00,
         status: 'pending', // pending, preparing, delivery, completed, cancelled
@@ -43,6 +44,7 @@ export const mockOrders = [
     {
         id: 'ORD-002',
         customer: 'María López',
+        avatar: 'https://i.pravatar.cc/150?u=maria',
         items: 'Pastel de Tres Leches',
         total: 380.00,
         status: 'completed',
@@ -52,6 +54,7 @@ export const mockOrders = [
     {
         id: 'ORD-003',
         customer: 'Carlos Ruiz',
+        avatar: 'https://i.pravatar.cc/150?u=carlos',
         items: 'Docena de Donas',
         total: 180.00,
         status: 'delivery',
@@ -61,6 +64,7 @@ export const mockOrders = [
     {
         id: 'ORD-004',
         customer: 'Ana García',
+        avatar: 'https://i.pravatar.cc/150?u=ana',
         items: 'Pastel de Zanahoria',
         total: 420.00,
         status: 'preparing',
@@ -70,6 +74,7 @@ export const mockOrders = [
     {
         id: 'ORD-005',
         customer: 'Roberto Díaz',
+        avatar: 'https://i.pravatar.cc/150?u=roberto',
         items: 'Pay de Limón',
         total: 250.00,
         status: 'cancelled',

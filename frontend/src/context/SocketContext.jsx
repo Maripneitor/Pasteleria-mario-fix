@@ -25,7 +25,7 @@ export const SocketProvider = ({ children }) => {
                 reconnection: true,
             });
 
-            console.log('🔌 Connecting to Socket.io...');
+            // console.log('🔌 Connecting to Socket.io...');
 
             newSocket.on('connect', () => {
                 console.log('✅ Connected to Socket.io');

@@ -32,7 +32,9 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
             clientPhone: '',
             deliveryDate: '',
             deliveryTime: '12:00',
-            folioType: 'Normal', // 'Normal' or 'Base/Especial'
+            deliveryTime: '12:00',
+            folioType: 'Base/Especial', // Default to show Visual Builder
+            persons: 20,
             persons: 20,
             cakeFlavor: [],
             filling: [],

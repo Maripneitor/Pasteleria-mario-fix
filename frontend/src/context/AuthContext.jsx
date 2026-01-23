@@ -116,14 +116,14 @@ export const AuthProvider = ({ children }) => {
 
             // OPCIONAL: Notificar al usuario o simplemente dejar que los useEffect 
             // de Clients.jsx y Folios.jsx reaccionen al cambio de estado.
-            console.log(`Cambiando a sucursal: ${selected.name}`);
+            // console.log(`Cambiando a sucursal: ${selected.name}`);
         } else {
             console.error("Sucursal no encontrada");
         }
     };
 
     const logout = () => {
-        console.log("Ejecutando logout...");
+        // console.log("Ejecutando logout...");
         localStorage.removeItem('token');
         localStorage.removeItem('branch_id');
         localStorage.removeItem('permissions');
