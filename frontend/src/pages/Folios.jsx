@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
-import { Plus, Calendar, User, DollarSign, X, Cake, Flame, LayoutGrid, List } from 'lucide-react';
+import { Plus, LayoutGrid, List, X } from 'lucide-react';
 import FolioCardSkeleton from '../components/FolioCardSkeleton';
 import SwipeableFolioCard from '../components/SwipeableFolioCard';
 import DigitalSignatureModal from '../components/DigitalSignatureModal';
 import FolioDetailsModal from '../components/FolioDetailsModal';
 import EmptyState from '../components/EmptyState';
 import { sanitizeFolioList } from '../utils/folioSanitizer';
+import FolioTable from '../components/dashboard/FolioTable';
 
 const Folios = () => {
     const [folios, setFolios] = useState([]);
@@ -16,7 +17,6 @@ const Folios = () => {
     const [error, setError] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
-
 
     // Interactions State
     const [signingFolio, setSigningFolio] = useState(null); // Folio being signed
@@ -51,10 +51,10 @@ const Folios = () => {
 
     useEffect(() => {
         if (user && currentBranch) {
-            setLoading(true); // Ensure loading state is reset when switching branches
+            setLoading(true);
             fetchFolios();
         }
-    }, [user, currentBranch?.id]); // FIX: Dependency on ID guarantees reload on switch
+    }, [user, currentBranch?.id]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -208,47 +208,19 @@ const Folios = () => {
                         ))}
                     </motion.div>
                 ) : (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
-                                <thead className="bg-gray-50 dark:bg-slate-800 text-xs uppercase font-medium">
-                                    <tr>
-                                        <th className="px-6 py-4">Folio</th>
-                                        <th className="px-6 py-4">Cliente</th>
-                                        <th className="px-6 py-4">Fecha Entrega</th>
-                                        <th className="px-6 py-4">Total</th>
-                                        <th className="px-6 py-4">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                    {folios.map((folio) => (
-                                        <tr
-                                            key={folio.id}
-                                            onClick={() => setSelectedFolio(folio)}
-                                            className="hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                                        >
-                                            <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">#{folio.folioNumber}</td>
-                                            <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{folio.clientName}</td>
-                                            <td className="px-6 py-4">{folio.deliveryDate}</td>
-                                            <td className="px-6 py-4 text-green-600 dark:text-green-400 font-bold">${folio.total}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold 
-                                                    ${folio.status === 'Entregado' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                        folio.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                            'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                                                    {folio.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <FolioTable
+                        folios={folios}
+                        onEdit={(folio) => setSelectedFolio(folio)}
+                        onPrint={(folio) => alert(`Imprimiendo ticket para folio ${folio.folioNumber}`)}
+                        onWhatsApp={(folio) => {
+                            const message = `Hola ${folio.clientName}, su pedido #${folio.folioNumber} está listo.`;
+                            window.open(`https://wa.me/${folio.clientPhone}?text=${encodeURIComponent(message)}`, '_blank');
+                        }}
+                        onViewDetails={(folio) => setSelectedFolio(folio)}
+                    />
                 )
             )}
 
-            {/* Modals remain the same */}
             <AnimatePresence>
                 {showCreateModal && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">

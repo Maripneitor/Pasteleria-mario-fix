@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, User, Phone, DollarSign, Clock, Cake, Layers, Sparkles } from 'lucide-react';
+import { X, Calendar, User, Phone, Clock, Cake, Layers, PenTool } from 'lucide-react';
 import Lightbox from 'yet-another-react-lightbox';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import 'yet-another-react-lightbox/styles.css';
+import SignaturePadModal from './SignaturePadModal';
+import api from '../services/api';
 
-
-const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
+const FolioDetailsModal = ({ folio, isOpen, onClose, onUpdate }) => {
     const [index, setIndex] = useState(-1);
+    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+    const [isSavingSignature, setIsSavingSignature] = useState(false);
 
     if (!isOpen || !folio) return null;
 
@@ -42,6 +46,36 @@ const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
         );
     };
 
+    const handleSignatureSave = async (signatureData) => {
+        try {
+            setIsSavingSignature(true);
+            const formData = new FormData();
+            formData.append('signature', signatureData);
+
+            // Si el estado no es entregado, lo cambiamos a entregado al firmar? 
+            // El requerimiento dice: "cuando el estado pase a Entregado... botón firmar".
+            // Asumimos que si firman, confirman entrega.
+            if (folio.status !== 'Entregado') {
+                formData.append('status', 'Entregado');
+            }
+
+            const response = await api.put(`/folios/${folio.id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (onUpdate) onUpdate(response.data);
+            setIsSignatureModalOpen(false);
+            onClose(); // Cerrar modal principal o mantenerlo? Mejor cerramos para refrescar o ver update.
+        } catch (error) {
+            console.error("Error guardando firma:", error);
+            alert("Error al guardar la firma.");
+        } finally {
+            setIsSavingSignature(false);
+        }
+    };
+
+    const canSign = folio.status === 'Entregado' || folio.status === 'Listo para Entrega';
+
     return (
         <>
             <AnimatePresence>
@@ -70,6 +104,22 @@ const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
 
                         {/* Content */}
                         <div className="p-6 space-y-8">
+
+                            {/* Actions */}
+                            {canSign && !folio.signature && (
+                                <div className="bg-bakery-50 border border-bakery-highlight rounded-xl p-4 flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-bold text-gray-800 text-sm">Firma de Recibido</h4>
+                                        <p className="text-xs text-gray-500">Solicita la firma al entregar el pedido.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsSignatureModalOpen(true)}
+                                        className="bg-bakery-accent hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20 transition-all"
+                                    >
+                                        <PenTool size={16} /> Firmar Entrega
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Images Section */}
                             {images.length > 0 && (
@@ -189,9 +239,19 @@ const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
                             {/* Signature Display (if exists) */}
                             {folio.signature && (
                                 <div>
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Firma de Entrega</h3>
-                                    <div className="border rounded-xl p-4 bg-gray-50 flex justify-center">
-                                        <img src={folio.signature} alt="Firma Cliente" className="max-h-32 opacity-80 mix-blend-multiply" />
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="p-1 rounded-full bg-green-100 text-green-600">
+                                            <Check size={14} />
+                                        </div>
+                                        <h3 className="text-xs font-bold text-green-600 uppercase tracking-widest">Entrega Verificada</h3>
+                                    </div>
+
+                                    <div className="border rounded-xl p-4 bg-gray-50 flex justify-center relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                        <img src={folio.signature} alt="Firma Cliente" className="max-h-32 opacity-90 mix-blend-multiply relative z-10" />
+                                        <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-gray-400 bg-white/80 px-2 py-0.5 rounded-full">
+                                            <PenTool size={10} /> Firmado Digitalmente
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -199,9 +259,22 @@ const FolioDetailsModal = ({ folio, isOpen, onClose }) => {
                         </div>
                     </motion.div>
                 </div>
+
+                {/* Signature Modal */}
+                <SignaturePadModal
+                    isOpen={isSignatureModalOpen}
+                    onClose={() => setIsSignatureModalOpen(false)}
+                    onSave={handleSignatureSave}
+                    isSaving={isSavingSignature}
+                />
             </AnimatePresence>
         </>
     );
 };
+
+// Simple check icon for display
+const Check = ({ size }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+);
 
 export default FolioDetailsModal;

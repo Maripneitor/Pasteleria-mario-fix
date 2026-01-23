@@ -10,6 +10,32 @@ export const AuthProvider = ({ children }) => {
     const [userPermissions, setUserPermissions] = useState([]);
     const [availableBranches, setAvailableBranches] = useState([]);
     const [loading, setLoading] = useState(true);
+    // Dark Mode State
+    const [darkMode, setDarkMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        }
+        return false;
+    });
+
+    // Toggle Theme Handler
+    const toggleTheme = () => {
+        setDarkMode(prev => {
+            const newMode = !prev;
+            localStorage.setItem('theme', newMode ? 'dark' : 'light');
+            return newMode;
+        });
+    };
+
+    // Apply Theme Effect
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [darkMode]);
 
     // Decode token helper
     const decodeToken = (token) => {
@@ -158,9 +184,28 @@ export const AuthProvider = ({ children }) => {
         return 'Usuario';
     };
 
+    // Helper para obtener rol normalizado
+    const getNormalizedRole = (usr, permissions) => {
+        if (usr?.role) return usr.role; // Si ya viene del backend
+
+        // Inferencia basada en permisos (fallback)
+        if (permissions.includes('admin.access')) return 'developer'; // O 'admin' según mapa
+        if (permissions.includes('owners.manage')) return 'owner';
+        if (permissions.includes('production.view')) return 'employee';
+
+        return 'employee'; // Default
+    };
+
+    // Derived user object with role and tenant_id guaranteed
+    const authUser = user ? {
+        ...user,
+        role: getNormalizedRole(user, userPermissions),
+        tenant_id: currentBranch?.id || user?.tenant_id
+    } : null;
+
     return (
         <AuthContext.Provider value={{
-            user,
+            user: authUser,
             currentBranch,
             userPermissions,
             availableBranches,
@@ -169,11 +214,14 @@ export const AuthProvider = ({ children }) => {
             logout,
             switchBranch,
             hasPermission,
-            getUserRoleLabel
+            getUserRoleLabel,
+            darkMode,
+            toggleTheme
         }}>
             {!loading && children}
         </AuthContext.Provider>
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

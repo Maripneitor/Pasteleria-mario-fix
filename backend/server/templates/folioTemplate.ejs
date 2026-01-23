@@ -512,6 +512,15 @@
                 <% }); %>
         </div>
         <% } %>
+        <% if (folio.signature) { %>
+        <div class="section full-width" style="margin-top: 20px; text-align: center; page-break-inside: avoid;">
+            <div class="section-title">Firma de Conformidad</div>
+            <div style="border: 1px dashed #ccc; padding: 10px; display: inline-block;">
+                <img src="<%= folio.signature %>" style="max-height: 80px; width: auto;">
+                <p style="font-size: 8pt; color: #666; margin-top: 5px;">Recibí producto a entera satisfacción</p>
+            </div>
+        </div>
+        <% } %>
             </div>
             <% } %>
 </body>

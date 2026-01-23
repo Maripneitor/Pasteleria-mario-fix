@@ -1,38 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import api, { updateUserRole } from '../services/api';
-import './AdminUserManagement.css';
+import api from '../services/api';
+import { User, Shield, Briefcase, Mail, Loader2, Trash2 } from 'lucide-react';
+import BakeryButton from '../components/ui/BakeryButton';
 
-const AdminUserManagement = () => {
+const UserManagement = () => {
     const [users, setUsers] = useState([]);
-    const [owners, setOwners] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [filterRole, setFilterRole] = useState('All');
-
-    // CSV Export
-    const exportToCSV = () => {
-        const headers = ["ID", "Usuario", "Email", "Rol", "Estatus", "Dueño"];
-        const rows = users.filter(u => filterRole === 'All' || u.role === filterRole).map(u => [
-            u.id,
-            u.username,
-            u.email,
-            u.role,
-            u.status,
-            u.ownerId || 'N/A'
-        ]);
-
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + headers.join(",") + "\n"
-            + rows.map(e => e.join(",")).join("\n");
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "usuarios_sistema.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+    const [error, setError] = useState('');
 
     useEffect(() => {
         fetchUsers();
@@ -40,162 +14,109 @@ const AdminUserManagement = () => {
 
     const fetchUsers = async () => {
         try {
-            setLoading(true);
             const response = await api.get('/users');
             setUsers(response.data);
-
-            // Filter potential owners (users with role 'Dueño')
-            const potentialOwners = response.data.filter(u => u.role === 'Dueño');
-            setOwners(potentialOwners);
-
             setLoading(false);
         } catch (err) {
             console.error("Error fetching users:", err);
-            setError("No se pudo cargar el registro de usuarios.");
+            setError('Error al cargar usuarios.');
             setLoading(false);
         }
     };
 
-    const handleRoleChange = async (userId, newRole) => {
+    const handleDelete = async (id) => {
+        if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
         try {
-            // Optimistic update
-            setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-
-            await updateUserRole(userId, { role: newRole });
-
-            // Refresh to ensure consistency (especially for owner lists)
-            if (newRole === 'Dueño' || newRole === 'Empleado') {
-                fetchUsers();
-            }
+            await api.delete(`/users/${id}`);
+            setUsers(users.filter(u => u.id !== id));
         } catch (err) {
-            console.error("Error updating role:", err);
-            alert("Error al actualizar el rol.");
-            fetchUsers(); // Revert
+            alert('Error al eliminar usuario');
         }
     };
 
-    const handleStatusChange = async (userId, newStatus) => {
-        try {
-            setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-            await updateUserRole(userId, { status: newStatus });
-        } catch (err) {
-            console.error("Error updating status:", err);
-            alert("Error al actualizar el estatus.");
-            fetchUsers();
-        }
-    };
-
-    const handleOwnerChange = async (userId, newOwnerId) => {
-        try {
-            // Convert to integer or null
-            const ownerId = newOwnerId ? parseInt(newOwnerId) : null;
-
-            setUsers(users.map(u => u.id === userId ? { ...u, ownerId: ownerId } : u));
-            await updateUserRole(userId, { ownerId: ownerId });
-        } catch (err) {
-            console.error("Error updating owner:", err);
-            alert("Error al vincular dueño.");
-            fetchUsers();
-        }
-    };
-
-    const filteredUsers = users.filter(u => filterRole === 'All' || u.role === filterRole);
+    if (loading) return (
+        <div className="flex h-96 items-center justify-center">
+            <Loader2 className="animate-spin text-bakery-primary" size={48} />
+        </div>
+    );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
-                {/* Header */}
-                <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 dark:bg-slate-900/50">
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Administración de Usuarios</h1>
-
-                    <div className="flex gap-4">
-                        <select
-                            value={filterRole}
-                            onChange={(e) => setFilterRole(e.target.value)}
-                            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-white"
-                        >
-                            <option value="All">Todos los Roles</option>
-                            <option value="Administrador">Administrador</option>
-                            <option value="Dueño">Dueño</option>
-                            <option value="Empleado">Empleado</option>
-                            <option value="Desarrollador">Desarrollador</option>
-                        </select>
-
-                        <button
-                            onClick={exportToCSV}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors"
-                        >
-                            Exportar CSV
-                        </button>
-                    </div>
+        <div className="space-y-6">
+            <header className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-serif font-bold text-gray-800 dark:text-white">Gestión de Usuarios</h1>
+                    <p className="text-gray-500 dark:text-gray-400">Administra el acceso del personal y dueños.</p>
                 </div>
+                {/* <BakeryButton variant="solid" onClick={() => {}}>Nuevo Usuario</BakeryButton> */}
+            </header>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-100 dark:bg-slate-900 text-gray-600 dark:text-gray-400 uppercase font-bold text-xs">
-                            <tr>
-                                <th className="px-6 py-4">Usuario</th>
-                                <th className="px-6 py-4">Email</th>
-                                <th className="px-6 py-4">Rol</th>
-                                <th className="px-6 py-4">Estatus</th>
-                                <th className="px-6 py-4">Dueño (Vinculación)</th>
+            {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-2">
+                    <Shield size={20} /> {error}
+                </div>
+            )}
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-bakery-50 dark:bg-slate-800 text-xs uppercase font-bold text-bakery-accent tracking-wider">
+                        <tr>
+                            <th className="px-6 py-4">Usuario</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Rol</th>
+                            <th className="px-6 py-4">Sucursal (Tenant)</th>
+                            <th className="px-6 py-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                        {users.map(user => (
+                            <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-bakery-secondary flex items-center justify-center text-bakery-accent font-bold">
+                                            {user.username?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="font-medium text-gray-900 dark:text-gray-200">{user.username}</div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                                    <div className="flex items-center gap-2">
+                                        <Mail size={14} /> {user.email}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1
+                                        ${user.role === 'Administrador' || user.role === 'developer' ? 'bg-purple-100 text-purple-700' :
+                                            user.role === 'Dueño' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-blue-100 text-blue-700'}`}>
+                                        <Briefcase size={12} /> {user.role}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-gray-500 text-sm">
+                                    {user.tenant_id ? `Tenant ${user.tenant_id}` : (user.ownerId ? `Owner ${user.ownerId}` : '-')}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button
+                                        onClick={() => handleDelete(user.id)}
+                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                        title="Eliminar Usuario"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                            {filteredUsers.map(user => (
-                                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{user.username}</td>
-                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{user.email}</td>
-                                    <td className="px-6 py-4">
-                                        <select
-                                            className="bg-transparent border border-gray-200 dark:border-slate-600 rounded px-2 py-1 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500"
-                                            value={user.role}
-                                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                        >
-                                            <option value="Administrador">Administrador</option>
-                                            <option value="Dueño">Dueño</option>
-                                            <option value="Empleado">Empleado</option>
-                                            <option value="Desarrollador">Desarrollador</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <select
-                                            className={`bg-transparent border border-gray-200 dark:border-slate-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 font-medium ${user.status === 'banned' ? 'text-red-500' : 'text-green-500'
-                                                }`}
-                                            value={user.status}
-                                            onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                                        >
-                                            <option value="active">Activo</option>
-                                            <option value="pending_verification">Pendiente</option>
-                                            <option value="banned">Baneado</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {user.role === 'Empleado' ? (
-                                            <select
-                                                className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500"
-                                                value={user.ownerId || ''}
-                                                onChange={(e) => handleOwnerChange(user.id, e.target.value)}
-                                            >
-                                                <option value="">-- Sin Vincular --</option>
-                                                {owners.map(owner => (
-                                                    <option key={owner.id} value={owner.id}>
-                                                        {owner.username} (ID: {owner.id})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <span className="text-gray-400 italic text-xs">N/A</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                        ))}
+                        {users.length === 0 && (
+                            <tr>
+                                <td colSpan="5" className="px-6 py-8 text-center text-gray-400 italic">
+                                    No se encontraron usuarios.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 };
 
-export default AdminUserManagement;
+export default UserManagement;

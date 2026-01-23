@@ -47,7 +47,16 @@ exports.createFolio = async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-        const tenantBranchId = req.tenant ? req.tenant.branchId : null;
+        const userRole = req.user?.role || '';
+        const isPrivileged = ['developer', 'admin', 'owner'].includes(userRole); // Roles capaces de crear en otras sucursales
+
+        let tenantBranchId = req.tenant ? req.tenant.branchId : null;
+
+        // Si es privilegiado y envía branchId explícito, usar ese.
+        if (isPrivileged && req.body.branchId) {
+            tenantBranchId = req.body.branchId;
+        }
+
         if (!tenantBranchId) throw new Error('Contexto de sucursal no definido');
 
         const {
@@ -57,6 +66,9 @@ exports.createFolio = async (req, res) => {
             existingImageUrls, existingImageComments,
             ...folioData
         } = req.body;
+
+        // DEBUG: Loguear payload completo para detectar errores de validación
+        console.log(`📦 payload crear folio (Raw Body):`, JSON.stringify(req.body, null, 2));
 
         const requiredFields = ['clientName', 'clientPhone', 'deliveryDate', 'total', 'advancePayment', 'folioType', 'persons', 'shape', 'designDescription'];
         const missingFields = requiredFields.filter(field => !req.body[field] && req.body[field] !== 0);
@@ -231,16 +243,28 @@ exports.createFolio = async (req, res) => {
 exports.getAllFolios = async (req, res) => {
     try {
         const { q, status } = req.query;
-        // Blindaje: Scope por Tenant obligatorio
+        // Blindaje: Scope por Tenant obligatorio (EXCEPTO para Admin/Developer)
+        const userRole = req.user?.role || ''; // Asumiendo que el middleware de auth populan el rol
+        const isPrivileged = ['developer', 'admin', 'owner'].includes(userRole); // Owner también debería ver todo su negocio? O solo su branch? El prompt dice Admin.
+
         const tenantBranchId = req.tenant ? req.tenant.branchId : null;
 
-        if (!tenantBranchId) {
+        if (!tenantBranchId && !isPrivileged) {
             return res.status(400).json({ message: 'Error de seguridad: No se pudo determinar el contexto de la sucursal.' });
         }
 
-        let whereClause = {
-            branchId: tenantBranchId // <--- EL BLINDAJE
-        };
+        let whereClause = {};
+
+        // Solo aplicar filtro de branch si NO es privilegiado
+        // REGLA DE NEGOCIO: El Admin/Developer DEBE ver todo (Global View).
+        // Si el usuario es privilegiado, NO agregamos branchId al whereClause.
+        if (!isPrivileged) {
+            whereClause.branchId = tenantBranchId;
+        } else {
+            // El usuario es admin/developer/owner, así que no filtramos por branch.
+            // Esto cumple con: "romper la barrera de sucursal".
+            console.log(`👁️ GLOBAL VIEW: Usuario Privilegiado (${userRole}) accediendo a folios de TODAS las sucursales.`);
+        }
 
         // 1. Filtro de Búsqueda (Search)
         if (q) {

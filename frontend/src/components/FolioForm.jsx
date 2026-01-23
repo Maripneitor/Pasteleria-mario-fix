@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Save, ArrowLeft, Trash, Plus, Calculator, Mic, Sparkles } from 'lucide-react';
 import IngredientPicker from './IngredientPicker';
@@ -14,6 +15,9 @@ const BLOCKED_FLAVORS = ['Mil Hojas', 'Pastel de Queso'];
 const TIER_DEFAULTS = { persons: 20, flavor: [], filling: [] };
 
 const FolioForm = ({ onCancel, onSuccess, initialData }) => {
+    const { user } = useAuth();
+    const isAdminOrDev = ['admin', 'developer'].includes(user?.role);
+
     // --- State for AI Features ---
     const [isDictationOpen, setIsDictationOpen] = useState(false);
 
@@ -201,6 +205,19 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
 
                         {/* Section: Client */}
                         <section className="space-y-4">
+                            {isAdminOrDev && (
+                                <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800 mb-6">
+                                    <label className="block text-sm font-bold text-amber-900 dark:text-amber-400 mb-1">Sucursal (ID) - Modo Admin</label>
+                                    <input
+                                        {...register('branchId')}
+                                        type="number"
+                                        placeholder="ID de Sucursal (ej. 1, 2)"
+                                        className="w-full border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 rounded p-2 text-sm"
+                                    />
+                                    <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">Si se deja vacío, se usará tu sucursal actual.</p>
+                                </div>
+                            )}
+
                             <h3 className="text-lg font-bold text-gray-700 dark:text-gray-200 border-b dark:border-slate-800 pb-2">Información del Cliente</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>

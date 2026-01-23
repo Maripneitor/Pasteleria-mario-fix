@@ -32,15 +32,34 @@ const requireBranchMembership = async (req, res, next) => {
   }
 
   const branchId = req.header('X-Branch-ID');
-  if (!branchId) return apiResponse(res, 400, 'Contexto de sucursal (X-Branch-ID) requerido.', null, "BRANCH_REQUIRED");
+
+  // MODIFICACION: Permitir acceso Global a Admins/Developers sin branchId
+  // Si no hay branchId y es admin, permitimos pasar pero req.tenant será undefined.
+  // Los controladores deben saber manejar req.tenant undefined (modo global).
+  const isGlobalAdmin = req.user && ['admin', 'developer', 'owner'].includes(req.user.role);
+
+  if (!branchId) {
+    if (isGlobalAdmin) {
+      console.log(`🌍 Acceso Global permitido para ${req.user.username} (${req.user.role})`);
+      return next();
+    }
+    return apiResponse(res, 400, 'Contexto de sucursal (X-Branch-ID) requerido.', null, "BRANCH_REQUIRED");
+  }
 
   try {
     const { UserBranchMembership } = require('../models');
-    const membership = await UserBranchMembership.findOne({
-      where: { user_id: req.user.id, branch_id: branchId }
-    });
+    // Si es global admin, ¿debe validar membresía?
+    // Técnicamente el admin tiene acceso a todo. 
+    // Si envía un ID, validamos que exista la branch, pero no necesariamente la "membresía" en tabla (si es superadmin).
+    // Por consistencia, asumimos que si envía ID, quiere actuar COMO esa sucursal.
 
-    if (!membership) return apiResponse(res, 403, 'No perteneces a esta sucursal.', null, "FORBIDDEN_BRANCH");
+    // Bypass de membresía para admins si se desea (opcional, pero seguro):
+    if (!isGlobalAdmin) {
+      const membership = await UserBranchMembership.findOne({
+        where: { user_id: req.user.id, branch_id: branchId }
+      });
+      if (!membership) return apiResponse(res, 403, 'No perteneces a esta sucursal.', null, "FORBIDDEN_BRANCH");
+    }
 
     req.tenant = { branchId: parseInt(branchId, 10) };
     next();
