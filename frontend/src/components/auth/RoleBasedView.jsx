@@ -1,4 +1,4 @@
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import PropTypes from 'prop-types';
 
 const RoleBasedView = ({ permission, allowedRoles, children, fallback = null }) => {

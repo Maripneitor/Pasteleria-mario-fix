@@ -2,9 +2,9 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
-import ResponsiveNavigation from '../ResponsiveNavigation';
+import ResponsiveNavigation from './ResponsiveNavigation';
 import ThemeToggle from '../ui/ThemeToggle';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DashboardLayout = ({ children }) => {
     // If children are provided, use them. Otherwise, use Outlet.

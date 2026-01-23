@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useSystemLog } from '../../context/SystemLogContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSystemLog } from '../../contexts/SystemLogContext';
 import { Activity, Database, X, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '../../services/api';
+import api from '../../services/api/client';
 
 const DevOverlay = () => {
     const { user } = useAuth();
