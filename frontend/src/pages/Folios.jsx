@@ -51,9 +51,10 @@ const Folios = () => {
 
     useEffect(() => {
         if (user && currentBranch) {
+            setLoading(true); // Ensure loading state is reset when switching branches
             fetchFolios();
         }
-    }, [user, currentBranch]);
+    }, [user, currentBranch?.id]); // FIX: Dependency on ID guarantees reload on switch
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;

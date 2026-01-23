@@ -1,20 +1,62 @@
-# Para iniciar el proyecto
- docker-compose up -d
+# Plantilla de Comandos: Pastelería La Fiesta
 
-# Para detener el proyecto
- docker-compose stop
+## 🐳 Gestión de Docker
+Usa estos comandos para controlar el entorno de contenedores (Base de Datos, Backend y Frontend).
 
-# Para detener el proyecto y eliminar los contenedores
- docker-compose down -v
+### Inicio rápido (en segundo plano):
+```bash
+docker-compose up -d
+```
 
-# Para iniciar el proyecto y reconstruir los contenedores
- docker-compose up --build
+### Reconstrucción total (Obligatorio tras cambios en modelos o dependencias):
+```bash
+docker-compose up --build
+```
 
- #flujo de trabajo con git
+### Limpieza profunda (Borra base de datos y archivos temporales):
+> [!WARNING]
+> ⚠️ Atención: Esto borrará todos los clientes y folios registrados.
 
- #git add .
- #git commit -m "backend2F"
- #git push origin main
+```bash
+docker-compose down -v
+```
 
- #git pull origin main
- 
+### Ver logs en tiempo real (Backend):
+```bash
+docker logs -f backend_pasteleria
+```
+
+## 🔑 Configuración Post-Inicio (Multi-tenant)
+Cada vez que limpies los volúmenes (-v) o inicies el proyecto por primera vez, debes ejecutar la migración para activar los permisos y las sucursales:
+
+```bash
+# Ejecutar migración de tablas y roles dentro del contenedor
+docker exec -it backend_pasteleria node scripts/migrate_to_multitenant.js
+```
+
+## 🌿 Flujo de Trabajo con Git
+Sigue este orden para mantener el repositorio sincronizado y evitar conflictos.
+
+### Sincronizar cambios remotos:
+```bash
+git pull origin main
+```
+
+### Preparar y guardar cambios locales:
+```bash
+git add .
+git commit -m "Descripción clara del cambio (ej: refactorizacion rbac frontend)"
+```
+
+### Subir al repositorio:
+```bash
+git push origin main
+```
+
+## 📋 Resumen de Puertos
+- **Frontend (Vite)**: http://localhost:5173
+- **Backend (API)**: http://localhost:3000
+- **Base de Datos (MySQL)**: localhost:3306
+
+> [!TIP]
+> Recomendación para Desarrollador: Si el frontend se queda en blanco tras un cambio importante, usa siempre `docker-compose up --build` para asegurar que Docker no esté usando una versión vieja de tus archivos.

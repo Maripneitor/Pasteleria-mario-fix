@@ -5,7 +5,11 @@
 @tailwind utilities;
 
 body {
-  @apply bg-bakery-50 text-slate-800 transition-colors duration-300 ease-in-out font-sans antialiased;
+  @apply bg-white text-gray-900 transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-bakery-950 text-bakery-milk;
 }
 
 h1,
@@ -29,11 +33,6 @@ h6 {
 
 ::-webkit-scrollbar-thumb {
   @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
-}
-
-/* Dark Mode Overrides */
-html.dark body {
-  @apply bg-bakery-950 text-bakery-200;
 }
 
 html.dark ::-webkit-scrollbar-thumb {

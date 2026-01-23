@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Switch from './ui/Switch';
+import BranchSelector from './BranchSelector';
 
 const ResponsiveNavigation = () => {
     const { user, logout } = useAuth();
@@ -14,75 +15,71 @@ const ResponsiveNavigation = () => {
 
     const navigation = [
         // Developer
-        { name: 'Dev Dashboard', href: '/dashboard/developer', icon: LayoutDashboard, roles: ['Desarrollador'] },
-        { name: 'System Debug', href: '/system-health', icon: ClipboardList, roles: ['Desarrollador'] },
+        { name: 'Dev Dashboard', href: '/dashboard/developer', icon: LayoutDashboard, permission: 'system.debug' },
+        { name: 'System Debug', href: '/system-health', icon: ClipboardList, permission: 'system.debug' },
 
-        // Owner
-        { name: 'Panel Dueño', href: '/dashboard/owner', icon: LayoutDashboard, roles: ['Dueño', 'Administrador'] },
-        { name: 'Clientes', href: '/clientes', icon: ClipboardList, roles: ['Dueño', 'Administrador'] },
+        // Owner/Admin
+        { name: 'Panel Dueño', href: '/dashboard/owner', icon: LayoutDashboard, permission: 'dashboard.view_stats' },
+        { name: 'Usuarios', href: '/users', icon: ClipboardList, permission: 'users.manage' }, // Added based on context
 
-        // Employee (and Owner/Admin)
-        { name: 'Producción', href: '/produccion', icon: Calendar, roles: ['Administrador', 'Vendedor', 'Pastelero', 'Empleado', 'Dueño'] },
-        { name: 'Folios', href: '/folios', icon: ClipboardList, roles: ['Administrador', 'Vendedor', 'Pastelero', 'Empleado', 'Dueño'] },
-        { name: 'Nuevo Folio', href: '/folio/nuevo', icon: PlusCircle, roles: ['Administrador', 'Vendedor', 'Empleado', 'Dueño'] },
+        // Production / Operation
+        { name: 'Producción', href: '/produccion', icon: Calendar, permission: 'folios.read' },
+        { name: 'Folios', href: '/folios', icon: ClipboardList, permission: 'folios.read' },
+        { name: 'Nuevo Folio', href: '/folio/nuevo', icon: PlusCircle, permission: 'folios.create' },
+        { name: 'Clientes', href: '/clientes', icon: ClipboardList, permission: 'clients.read' },
 
         // Common
-        { name: 'Calendario', href: '/calendario', icon: Calendar, roles: ['Administrador', 'Vendedor', 'Pastelero', 'Dueño'] },
-        { name: 'Bandeja IA', href: '/bandeja-ia', icon: MessageSquare, roles: ['Administrador', 'Vendedor', 'Dueño'] },
+        { name: 'Calendario', href: '/calendario', icon: Calendar, permission: 'folios.read' },
+        { name: 'Bandeja IA', href: '/bandeja-ia', icon: MessageSquare, permission: 'folios.create' },
     ];
 
     const isActive = (path) => location.pathname === path;
 
-    // Filter items based on role AND dashboardConfig
-    const filteredNav = navigation.filter(item => {
-        // 1. Role Check
-        const roleMatches = !item.roles || (user && item.roles.includes(user.role));
-
-        // 2. Config Check (Disabled Tabs)
-        // Map menu items to config keys (naive mapping for now, explicitly add keys to nav items later if strictly needed,
-        // but let's assume 'clients', 'inventory' match hrefs or names)
-
-        // Let's rely on href to match 'key' from AdminOwnerManagement
-        // Keys used there: metrics, inventory, clients, employees
+    // Filter items based ONLY on dashboardConfig (permissions handled by RoleBasedView)
+    const visibleNav = navigation.filter(item => {
+        // Config Check (Disabled Tabs)
         let configKey = null;
         if (item.href === '/inventario') configKey = 'inventory';
         if (item.href === '/clientes') configKey = 'clients';
-        if (item.href === '/recetas') configKey = 'employees'; // Example mapping
 
         const disabledTabs = user?.dashboardConfig?.disabledTabs || [];
         const isHidden = configKey && disabledTabs.includes(configKey);
 
-        return roleMatches && !isHidden;
+        return !isHidden;
     });
 
     // Sidebar Content (Reused for Desktop and Mobile Drawer)
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-bakery-50 dark:bg-bakery-950 transition-colors duration-300">
             {/* Header */}
-            <div className="p-6 flex items-center gap-3 border-b border-gray-100 dark:border-gray-800">
-                <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
-                    P
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
+                        P
+                    </div>
+                    <span className="text-xl font-bold text-bakery-text dark:text-bakery-milk tracking-tight font-serif">
+                        Pastelería
+                    </span>
                 </div>
-                <span className="text-xl font-bold text-bakery-text dark:text-bakery-dark-text tracking-tight font-serif">
-                    Pastelería
-                </span>
+                <BranchSelector />
             </div>
 
             {/* Links */}
             <nav className="flex-1 px-4 space-y-2 py-4 overflow-y-auto">
-                {filteredNav.map((item) => (
-                    <Link
-                        key={item.name}
-                        to={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium border-l-4 ${isActive(item.href)
-                            ? 'bg-blue-50 text-blue-600 border-blue-500 dark:bg-bakery-800 dark:text-blue-400 dark:border-blue-500'
-                            : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-bakery-800 dark:hover:text-gray-200'
-                            }`}
-                    >
-                        <item.icon size={20} />
-                        {item.name}
-                    </Link>
+                {visibleNav.map((item) => (
+                    <RoleBasedView key={item.name} permission={item.permission}>
+                        <Link
+                            to={item.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium border-l-4 ${isActive(item.href)
+                                ? 'bg-blue-50 text-blue-600 border-blue-500 dark:bg-bakery-800 dark:text-blue-400 dark:border-blue-500'
+                                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-bakery-800 dark:hover:text-bakery-milk'
+                                }`}
+                        >
+                            <item.icon size={20} />
+                            {item.name}
+                        </Link>
+                    </RoleBasedView>
                 ))}
             </nav>
 

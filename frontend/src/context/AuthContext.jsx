@@ -108,15 +108,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     const switchBranch = (branchId) => {
-        const branch = availableBranches.find(b => String(b.id) === String(branchId));
-        if (branch) {
-            console.log(`Cambiando de sucursal a: ${branch.name}`);
-            localStorage.setItem('branch_id', branch.id);
-            localStorage.setItem('current_branch_id', branch.id);
-            setCurrentBranch(branch);
-            // La recarga de datos debe ser manejada por los componentes que dependen de 'currentBranch'
-            // Opcionalmente podemos forzar un reload si la app no es reactiva completamente
-            // window.location.reload(); 
+        const selected = availableBranches.find(b => b.id === parseInt(branchId));
+        if (selected) {
+            setCurrentBranch(selected);
+            localStorage.setItem('branch_id', selected.id); // Mantener legacy por compatibilidad
+            localStorage.setItem('current_branch_id', selected.id);
+
+            // OPCIONAL: Notificar al usuario o simplemente dejar que los useEffect 
+            // de Clients.jsx y Folios.jsx reaccionen al cambio de estado.
+            console.log(`Cambiando a sucursal: ${selected.name}`);
         } else {
             console.error("Sucursal no encontrada");
         }

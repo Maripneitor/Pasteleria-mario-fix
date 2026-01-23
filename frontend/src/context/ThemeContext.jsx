@@ -1,37 +1,41 @@
-import React, { createContext, useContext, useLayoutEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
-    // Initialize state from local storage or system preference
-    const [isDark, setIsDark] = useState(() => {
+    const [theme, setTheme] = useState(() => {
         const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            return savedTheme === 'dark';
-        }
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme) return savedTheme;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     });
 
-    useLayoutEffect(() => {
+    useEffect(() => {
+        // Initial setup
         const root = window.document.documentElement;
-        // Apply class immediately
-        if (isDark) {
+        if (theme === 'dark') {
             root.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
         } else {
             root.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
         }
-    }, [isDark]);
+    }, []); // Run once on mount to sync with initial state
 
     const toggleTheme = () => {
-        setIsDark(prev => !prev);
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        const root = window.document.documentElement;
+        if (newTheme === 'dark') {
+            root.classList.add('dark');
+        } else {
+            root.classList.remove('dark');
+        }
     };
 
     return (
-        <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+        <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
             {children}
         </ThemeContext.Provider>
     );

@@ -16,10 +16,10 @@ api.interceptors.request.use(
         }
 
         // Inyectar X-Branch-ID (Case Sensitive preference)
-        const branchId = localStorage.getItem('branch_id');
-        if (branchId) {
-            config.headers['X-Branch-ID'] = branchId;
-        }
+        // Inyectar X-Branch-ID (Case Sensitive preference)
+        const branchId = localStorage.getItem('current_branch_id'); // Asegura consistencia
+
+        if (branchId) config.headers['X-Branch-ID'] = branchId; // Header exacto
 
         // [DEV-ONLY] Capturar email en intentos de login para debugging
         if (config.url?.includes('/login') && config.method === 'post' && config.data?.email) {

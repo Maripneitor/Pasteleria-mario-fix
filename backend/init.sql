@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `clients` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `phone` varchar(255) NOT NULL,
+  `branch_id` bigint DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `folios` (
   `updatedAt` datetime NOT NULL,
   `responsibleUserId` int DEFAULT NULL,
   `clientId` int DEFAULT NULL,
+  `branch_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `folioNumber` (`folioNumber`),
   KEY `responsibleUserId` (`responsibleUserId`),
@@ -90,16 +92,15 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `phone` varchar(255) DEFAULT NULL, -- Campo faltante
   `password` varchar(255) NOT NULL,
-  `role` enum('Desarrollador', 'Dueño', 'Empleado', 'Administrador') NOT NULL DEFAULT 'Empleado',
+  `phone` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `last_login_at` datetime DEFAULT NULL,
   `ownerId` int DEFAULT NULL,
   `dashboardConfig` json DEFAULT NULL,
   `ownerSeal` text,
   `status` enum('active', 'pending_verification', 'banned') DEFAULT 'active',
   `permissions` json DEFAULT NULL,
-  `isActive` tinyint(1) NOT NULL DEFAULT '1',
-  `lastLoginAt` datetime DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
@@ -195,7 +196,6 @@ INSERT INTO
     `username`,
     `email`,
     `password`,
-    `role`,
     `createdAt`,
     `updatedAt`
   )
@@ -205,7 +205,6 @@ VALUES
     'Isaac',
     'isaac@lafiesta.com',
     '$2b$10$/PCP5a2pzLMF6cjs/Hd03u.KN5r8yBymBHxvvsJf6k67p9L0ssi0.',
-    'Administrador',
     '2025-09-30 01:26:31',
     '2025-09-30 01:26:31'
   );

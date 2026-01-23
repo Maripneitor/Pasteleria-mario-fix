@@ -1,25 +1,23 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Navigation from '../components/Navigation';
 import ProductionStepper from '../components/ui/ProductionStepper';
 import { motion } from 'framer-motion';
-import { useToast } from '../context/ToastSystem';
-import NotificationCard from '../components/ui/NotificationCard';
 import QuickActionBar from '../components/dashboard/QuickActionBar';
 import ChalkMetricsBoard from '../components/dashboard/ChalkMetricsBoard';
 import CashClosing from '../components/dashboard/CashClosing';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../services/api';
+import CakeLoader from '../components/CakeLoader';
+import EmptyState from '../components/EmptyState';
 
-import { DollarSign, Package, Clock, PlusCircle, Calendar as CalendarIcon, UserPlus, FileText, CheckCircle } from 'lucide-react';
+import { DollarSign, Package, Clock, PlusCircle, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 
 const Dashboard = () => {
-    const { user, currentBranch, hasPermission } = useAuth();
+    const { user, currentBranch, hasPermission, getUserRoleLabel } = useAuth();
     const navigate = useNavigate();
 
-    // Role definition for display purposes only
-    const role = user?.role || 'Guest';
+    const roleLabel = getUserRoleLabel();
 
     const [inviteToken, setInviteToken] = React.useState(null);
     const [showQrModal, setShowQrModal] = React.useState(false);
@@ -36,8 +34,10 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchStats = async () => {
-            if (hasPermission('dashboard.view_stats')) {
+            if (hasPermission('dashboard.view_stats') && currentBranch) {
+                setLoadingStats(true);
                 try {
+                    // Assuming API handles branch filtering via header
                     const response = await api.get('/dashboard/daily-summary');
                     setDailyStats({
                         totalSales: response.data.totalSales || 0,
@@ -56,10 +56,10 @@ const Dashboard = () => {
             }
         };
 
-        if (user && currentBranch) {
+        if (user) {
             fetchStats();
         }
-    }, [user, currentBranch, hasPermission]);
+    }, [user, currentBranch?.id, hasPermission]); // Reactive to branch change
 
     const generateInvite = async () => {
         if (!hasPermission('users.invite')) {
@@ -90,20 +90,17 @@ const Dashboard = () => {
         }),
     };
 
-    // Simulate "Page Load" effect
-    useEffect(() => {
-        // Example welcome toast if desired
-    }, []);
-
-    const heading = "Pastelería La Fiesta";
+    const heading = "Bienvenido a La Fiesta";
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-red-50 dark:from-bakery-950 dark:via-slate-900 dark:to-bakery-900 font-sans text-gray-900 dark:text-white flex">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-red-50 dark:from-bakery-950 dark:via-slate-900 dark:to-bakery-900 font-sans text-gray-900 dark:text-white">
 
-            {/* Conditional Navigation */}
-            <Navigation />
+            {/* Conditional Global Loader if initial page load depends on heavy calls, but here we use localized loaders mostly. 
+                Using CakeLoader for stats specifically if we want to block interaction, OR inline skeletons. 
+                Let's use CakeLoader for the initial transition only if strictly needed, or just let skeletons handle it.
+            */}
 
-            <main className="flex-1 w-full max-w-7xl px-4 md:px-10 py-10 md:py-12 md:ml-20 mb-20 md:mb-0 overflow-x-hidden">
+            <main className="w-full max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-10">
                 <motion.div
                     initial="hidden"
                     animate="visible"
@@ -126,26 +123,24 @@ const Dashboard = () => {
                                     </motion.span>
                                 ))}
                             </motion.h1>
-                            <motion.p variants={letterVariants} className="text-gray-400 mt-2 font-medium">
-                                Panel de {role}
+                            <motion.p variants={letterVariants} className="text-gray-400 mt-2 font-medium flex items-center gap-2">
+                                Panel de {roleLabel}
+                                {currentBranch && <span className="text-xs bg-bakery-100 text-bakery-800 px-2 py-0.5 rounded-full border border-bakery-200">@{currentBranch.name}</span>}
                             </motion.p>
                         </div>
 
                         <motion.div variants={letterVariants}>
-                            <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm flex items-center gap-2 ${role === 'Administrador' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                                role === 'Repostero' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                                    'bg-blue-50 text-blue-600 border-blue-100'
-                                }`}>
-                                <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-                                {user?.name || 'Usuario'}
+                            <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm flex items-center gap-2 bg-white dark:bg-slate-800 dark:border-slate-700`}>
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                {user?.username}
                             </div>
                         </motion.div>
                     </div>
 
                     {/* Quick Actions Bar */}
-                    <QuickActionBar role={role} />
+                    <QuickActionBar />
 
-                    {/* Role Based Content - Cleaned Up */}
+                    {/* Stats Section with Local Loading State */}
                     {hasPermission('dashboard.view_stats') && (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                             {/* Stats Column */}
@@ -156,18 +151,19 @@ const Dashboard = () => {
                                 >
                                     <StatCard
                                         title="Ventas del Día"
-                                        value={loadingStats ? "..." : `$${dailyStats.totalSales.toLocaleString()}`}
+                                        value={loadingStats ? "..." : `$${(dailyStats.totalSales || 0).toLocaleString()}`}
                                         icon={<DollarSign size={24} />}
                                         color="bg-green-100 text-green-600"
                                         delay={0.1}
+                                        isLoading={loadingStats}
                                     />
-                                    {/* These might need backend adjustments to get counts specifically, using placeholders or partial data */}
                                     <StatCard
                                         title="Ingreso Real (Hoy)"
                                         value={loadingStats ? "..." : `$${(dailyStats.realIncome || 0).toLocaleString()}`}
                                         icon={<Package size={24} />}
                                         color="bg-blue-100 text-blue-600"
                                         delay={0.2}
+                                        isLoading={loadingStats}
                                     />
                                     <StatCard
                                         title="Saldo Pendiente"
@@ -175,6 +171,7 @@ const Dashboard = () => {
                                         icon={<Clock size={24} />}
                                         color="bg-yellow-100 text-yellow-600"
                                         delay={0.3}
+                                        isLoading={loadingStats}
                                     />
                                 </motion.div>
 
@@ -186,11 +183,12 @@ const Dashboard = () => {
 
                             {/* Notifications Area */}
                             <div className="lg:col-span-4 space-y-6 flex flex-col items-center lg:items-end">
-                                {/* <NotificationCard message="Alerta IA" text="Inventario de harina bajo. Pronóstico sugiere reabastecer hoy." /> REMOVED LEGACY */}
+                                {/* Placeholders or real notifications */}
                             </div>
                         </div>
                     )}
 
+                    {/* Operational Actions */}
                     {(hasPermission('folios.create') || hasPermission('calendar.view')) && (
                         <div className="space-y-6">
                             <motion.div
@@ -252,41 +250,21 @@ const Dashboard = () => {
                                 )}
                             </motion.div>
 
-                            {/* CASH CLOSING - CHALKBOARD */}
+                            {/* CASH CLOSING */}
                             {(hasPermission('cash.close') || hasPermission('dashboard.view_stats')) && (
                                 <motion.div variants={letterVariants}>
                                     <CashClosing />
                                 </motion.div>
                             )}
-
-                            <div className="md:col-span-2">
-                                <NotificationCard message="Recordatorio" text="Revisar pedidos para entrega de mañana." />
-                            </div>
                         </div>
                     )}
 
+                    {/* Production View */}
                     {hasPermission('production.view') && (
                         <motion.div className="max-w-3xl mx-auto space-y-10" variants={containerVariants}>
-                            {/* Production Item 1 */}
-                            <ProductionItem
-                                id="#105"
-                                name="Pastel de Chocolate"
-                                tag="Urgente"
-                                currentStep={2}
-                            />
-
-                            {/* Production Item 2 */}
-                            <ProductionItem
-                                id="#106"
-                                name="Tres Leches"
-                                tag="Para Mañana"
-                                currentStep={1}
-                                steps={[
-                                    { title: "Confirmado", time: "11:30 AM", status: "Listo" },
-                                    { title: "En Horno", time: "Estimado: 2:00 PM", status: "Pendiente" },
-                                    { title: "Decoración", time: "Estimado: 3:30 PM", status: "Pendiente" }
-                                ]}
-                            />
+                            {/* Mock Data for visual - Should be replaced with real production feed ideally */}
+                            <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300">Producción en Curso</h3>
+                            <EmptyState message="No hay órdenes en producción activas en esta vista rápida." subMessage="Revisa el tablero de Kanban completo." />
                         </motion.div>
                     )}
                 </motion.div>
@@ -295,16 +273,20 @@ const Dashboard = () => {
     );
 };
 
-// Sub-components for cleaner code
-const StatCard = ({ title, value, icon, color }) => (
+// Sub-components
+const StatCard = ({ title, value, icon, color, isLoading }) => (
     <motion.div
         whileHover={{ y: -5, scale: 1.02 }}
-        className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center space-x-4 transition-all duration-300"
+        className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center space-x-4 transition-all duration-300"
     >
         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${color}`}>{icon}</div>
         <div>
-            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider">{title}</h3>
-            <p className="text-2xl font-black text-gray-800 mt-1">{value}</p>
+            <h3 className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider">{title}</h3>
+            {isLoading ? (
+                <div className="h-8 w-24 bg-gray-200 dark:bg-slate-700 rounded animate-pulse mt-1"></div>
+            ) : (
+                <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{value}</p>
+            )}
         </div>
     </motion.div>
 );
@@ -314,7 +296,7 @@ const DashboardAction = ({ title, desc, color, onClick, icon }) => (
         whileHover={{ scale: 0.98 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className={`relative overflow-hidden w-full h-48 rounded-3xl shadow-lg shadow-gray-200/50 flex flex-col justify-end p-6 text-left group bg-gradient-to-br ${color}`}
+        className={`relative overflow-hidden w-full h-48 rounded-3xl shadow-lg shadow-gray-200/50 dark:shadow-none flex flex-col justify-end p-6 text-left group bg-gradient-to-br ${color}`}
     >
         <div className="absolute top-6 right-6 p-3 bg-white/20 backdrop-blur-sm rounded-2xl group-hover:rotate-12 transition-transform duration-300">
             {icon}
@@ -326,19 +308,6 @@ const DashboardAction = ({ title, desc, color, onClick, icon }) => (
         {/* Shimmer Effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
     </motion.button>
-);
-
-const ProductionItem = ({ id, name, tag, currentStep, steps }) => (
-    <motion.div
-        layout
-        className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100"
-    >
-        <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-xl text-gray-800">{name} <span className="text-gray-400 font-normal text-base ml-2">{id}</span></h3>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold ${tag === 'Urgente' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{tag}</span>
-        </div>
-        <ProductionStepper currentStep={currentStep} steps={steps} />
-    </motion.div>
 );
 
 export default Dashboard;

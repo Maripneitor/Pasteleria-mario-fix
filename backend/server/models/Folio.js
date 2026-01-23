@@ -32,11 +32,11 @@ const Folio = sequelize.define('Folio', {
     allowNull: false
   },
   cakeFlavor: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true
   },
   filling: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true
   },
   designDescription: {
