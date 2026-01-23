@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Switch from './ui/Switch';
 import BranchSelector from './BranchSelector';
+import RoleBasedView from './auth/RoleBasedView';
 
 const ResponsiveNavigation = () => {
     const { user, logout } = useAuth();
@@ -20,7 +21,7 @@ const ResponsiveNavigation = () => {
 
         // Owner/Admin
         { name: 'Panel Dueño', href: '/dashboard/owner', icon: LayoutDashboard, permission: 'dashboard.view_stats' },
-        { name: 'Usuarios', href: '/users', icon: ClipboardList, permission: 'users.manage' }, // Added based on context
+        { name: 'Usuarios', href: '/admin/users', icon: ClipboardList, permission: 'users.manage' }, // Added based on context
 
         // Production / Operation
         { name: 'Producción', href: '/produccion', icon: Calendar, permission: 'folios.read' },
@@ -87,7 +88,8 @@ const ResponsiveNavigation = () => {
             <div className="p-4 border-t border-gray-100 dark:border-gray-800 mt-auto">
 
                 {/* User Profile */}
-                <div className="flex items-center gap-3 px-4 py-3 mb-2 bg-gray-50 dark:bg-black/20 rounded-lg">
+                {/* User Profile */}
+                <Link to="/profile" className="flex items-center gap-3 px-4 py-3 mb-2 bg-gray-50 dark:bg-black/20 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold">
                         {user?.username?.charAt(0).toUpperCase() || 'U'}
                     </div>
@@ -95,7 +97,7 @@ const ResponsiveNavigation = () => {
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-200 truncate">{user?.username || 'Usuario'}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-500 truncate">{user?.role || 'Rol'}</p>
                     </div>
-                </div>
+                </Link>
 
                 {/* Dark Mode Toggle */}
                 <div className="flex justify-center py-4 border-t border-gray-100 dark:border-gray-800">

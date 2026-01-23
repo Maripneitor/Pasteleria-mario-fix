@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { DragDropContext } from '@hello-pangea/dnd';
 import KanbanColumn from './KanbanColumn';
 import folioService from '../services/folioService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { sanitizeFolioList } from '../utils/folioSanitizer';
+import { useSocket } from '../context/SocketContext';
 
 const COLUMNS = [
     { id: 'Pendiente', title: 'Pendiente', color: 'bg-gray-500' },
@@ -19,39 +21,55 @@ const KanbanBoard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [notification, setNotification] = useState(null);
+    const socket = useSocket();
 
     useEffect(() => {
         fetchFolios();
     }, []);
 
+    useEffect(() => {
+        if (!socket) return;
+        const handleUpdate = (data) => {
+            console.log('🔔 Kanban Update:', data);
+            fetchFolios();
+        };
+        socket.on('folio:created', handleUpdate);
+        socket.on('folio:updated', handleUpdate);
+        socket.on('folio:deleted', handleUpdate);
+        return () => {
+            socket.off('folio:created', handleUpdate);
+            socket.off('folio:updated', handleUpdate);
+            socket.off('folio:deleted', handleUpdate);
+        };
+    }, [socket]);
+
     const fetchFolios = async () => {
         try {
-            const response = await folioService.getAllFolios({ status: '' }); // Fetch all statuses
-
-            // Robust check: Handle array directly or { data: [...] } structure
-            const foliosData = Array.isArray(response)
-                ? response
-                : (response?.data && Array.isArray(response.data) ? response.data : []);
-
+            const response = await folioService.getAllFolios({ status: '' });
+            const foliosData = Array.isArray(response) ? response : (response?.data || []);
             setFolios(sanitizeFolioList(foliosData));
             setLoading(false);
         } catch (err) {
             console.error("Error loading Kanban board:", err);
-            setError('Error al cargar el tablero de producción.');
+            setError('Error de conexión con la base de datos de producción.');
             setLoading(false);
         }
     };
 
-    const handleDrop = async (folioId, newStatus) => {
+    const onDragEnd = async (result) => {
+        const { destination, source, draggableId } = result;
+
+        if (!destination) return;
+        if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+        const newStatus = destination.droppableId;
+        const folioId = draggableId;
+
         // 1. Optimistic Update
         const originalFolios = [...folios];
         const folioIndex = folios.findIndex(f => f.id.toString() === folioId.toString());
 
         if (folioIndex === -1) return;
-        const currentStatus = folios[folioIndex].status;
-
-        // Don't do anything if dropped in same column
-        if (currentStatus === newStatus) return;
 
         const updatedFolios = [...folios];
         updatedFolios[folioIndex] = { ...updatedFolios[folioIndex], status: newStatus };
@@ -62,7 +80,6 @@ const KanbanBoard = () => {
             await folioService.updateFolioStatus(folioId, { status: newStatus });
             showNotification(`Folio actualizado a ${newStatus}`, 'success');
         } catch (err) {
-            // Rollback
             setFolios(originalFolios);
             showNotification('Error al actualizar el estado', 'error');
         }
@@ -85,43 +102,30 @@ const KanbanBoard = () => {
 
     return (
         <div className="h-full flex flex-col relative">
-            {/* Toast Notification */}
-            <AnimatePresence>
-                {notification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20, x: '-50%' }}
-                        animate={{ opacity: 1, y: 20, x: '-50%' }}
-                        exit={{ opacity: 0, y: -20, x: '-50%' }}
-                        className={`fixed top-4 left-1/2 z-50 px-6 py-3 rounded-full shadow-lg font-medium text-white ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
-                    >
-                        {notification.message}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {folios.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                    <EmptyState
-                        message="Tablero de Producción Vacío"
-                        subMessage="No hay folios activos en este momento."
-                    />
-                </div>
-            ) : (
-                <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-50 dark:bg-bakery-950 transition-colors">
-                    <div className="flex h-full gap-4 p-4 min-w-max pb-6">
-                        {COLUMNS.map(col => (
-                            <KanbanColumn
-                                key={col.id}
-                                status={col.id}
-                                title={col.title}
-                                color={col.color}
-                                folios={folios}
-                                onDrop={handleDrop}
-                            />
-                        ))}
+            <DragDropContext onDragEnd={onDragEnd}>
+                {folios.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                        <EmptyState
+                            message="Tablero de Producción Vacío"
+                            subMessage="No hay folios activos en este momento."
+                        />
                     </div>
-                </div>
-            )}
+                ) : (
+                    <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-50 dark:bg-bakery-950 transition-colors">
+                        <div className="flex h-full gap-4 p-4 min-w-max pb-6">
+                            {COLUMNS.map(col => (
+                                <KanbanColumn
+                                    key={col.id}
+                                    status={col.id}
+                                    title={col.title}
+                                    color={col.color}
+                                    folios={folios}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </DragDropContext>
         </div>
     );
 };

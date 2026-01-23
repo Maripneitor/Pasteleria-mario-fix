@@ -93,8 +93,9 @@ exports.getDailySummary = async (req, res) => {
 function mapStatusToFrontend(dbStatus) {
     const statusMap = {
         'Pendiente': 'pending',
-        'En Proceso': 'preparing', // Asumiendo 'En Proceso' existe
-        'En Ruta': 'delivery',
+        'Nuevo': 'pending', // Nuevo viewed as pending
+        'En Producción': 'preparing',
+        'Listo para Entrega': 'delivery', // Ready for delivery/pickup
         'Entregado': 'completed',
         'Cancelado': 'cancelled'
     };

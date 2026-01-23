@@ -3,7 +3,10 @@
 require('dotenv').config();
 
 // --- IMPORTACIÓN DE MÓDULOS ---
+// --- IMPORTACIÓN DE MÓDULOS ---
 const express = require('express');
+const http = require('http'); // [SOCKET.IO] Import http
+const { Server } = require("socket.io"); // [SOCKET.IO] Import Server
 const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet'); // Seguridad básica
@@ -30,7 +33,34 @@ require('./server/cronJobs');
 
 // --- CONFIGURACIÓN DE LA APLICACIÓN ---
 const app = express();
+const server = http.createServer(app); // [SOCKET.IO] Create HTTP server
 const PORT = process.env.PORT || 3000;
+
+// [SOCKET.IO] Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Branch-ID', 'X-Org-ID'],
+    credentials: true
+  }
+});
+
+// [SOCKET.IO] Connection Handler
+io.on('connection', (socket) => {
+  // Join branch-specific room if provided in handshake (optional, can be improved later)
+  const branchId = socket.handshake.query.branchId;
+  if (branchId) {
+    socket.join(`branch-${branchId}`);
+    console.log(`🔌 Socket conectado: ${socket.id} (Branch: ${branchId})`);
+  } else {
+    console.log(`🔌 Socket conectado: ${socket.id} (Sin Branch)`);
+  }
+
+  socket.on('disconnect', () => {
+    console.log('🔌 Socket desconectado:', socket.id);
+  });
+});
 
 // Conectar a la base de datos
 conectarDB();
@@ -57,6 +87,12 @@ const globalLimiter = rateLimit({
 app.use('/api/', globalLimiter);
 
 app.use(express.json({ limit: '10mb' })); // Limitar tamaño de body para evitar sobrecarga de memoria
+
+// [SOCKET.IO] Middleware to attach io to req
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // Servir archivos estáticos de la carpeta 'uploads'
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -85,7 +121,7 @@ sequelize.authenticate().then(async () => {
   await createDevUser();
   await ingredientController.seedIngredients();
 
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
   });
 }).catch(err => console.error('❌ Error fatal:', err));

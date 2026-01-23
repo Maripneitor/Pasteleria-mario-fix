@@ -1,6 +1,8 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { Save, ArrowLeft, Trash, Plus, Calculator, Mic, Sparkles } from 'lucide-react';
+import { Save, ArrowLeft, Trash, Plus, Calculator, Mic, Sparkles, Image as ImageIcon, X } from 'lucide-react';
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 import IngredientPicker from './IngredientPicker';
 import VoiceDictationModal from './VoiceDictationModal';
 import AiSidebar from './AiSidebar';
@@ -9,6 +11,10 @@ import VisualCakeBuilder from './VisualCakeBuilder';
 import ProductionLabelPreview from './ProductionLabelPreview';
 import api from '../services/api';
 
+const isUrl = (string) => {
+    try { return Boolean(new URL(string)); } catch (e) { return false; }
+};
+
 // --- Constants & Helpers ---
 const BLOCKED_FLAVORS = ['Mil Hojas', 'Pastel de Queso'];
 const TIER_DEFAULTS = { persons: 20, flavor: [], filling: [] };
@@ -16,6 +22,8 @@ const TIER_DEFAULTS = { persons: 20, flavor: [], filling: [] };
 const FolioForm = ({ onCancel, onSuccess, initialData }) => {
     // --- State for AI Features ---
     const [isDictationOpen, setIsDictationOpen] = useState(false);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
 
     // --- React Hook Form Setup ---
     const { register, control, handleSubmit, setValue, getValues, formState: { errors, isSubmitting } } = useForm({
@@ -28,21 +36,27 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
             persons: 20,
             cakeFlavor: [],
             filling: [],
-            tiers: [], // For 'Base/Especial'
+            tiers: [],
             additional: [],
-            total: 0, // Base price input
+            referenceImages: [], // New Field
+            total: 0,
             deliveryCost: 0,
             advancePayment: 0,
             addCommissionToCustomer: false,
             shape: 'Redondo',
             designDescription: '',
-            originalDescription: '' // To store AI analysis backup
+            originalDescription: ''
         }
     });
 
     const { fields: additionalFields, append: appendAdditional, remove: removeAdditional } = useFieldArray({
         control,
         name: 'additional'
+    });
+
+    const { fields: imageFields, append: appendImage, remove: removeImage } = useFieldArray({
+        control,
+        name: 'referenceImages'
     });
 
     const { fields: tierFields, append: appendTier, remove: removeTier } = useFieldArray({
@@ -394,12 +408,70 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
                                         placeholder="Detalles específicos del decorado..."
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
-                                        <Sparkles size={14} className="text-purple-500" />
-                                        Análisis Visual
-                                    </label>
-                                    <ImageAnalyzer onAnalysisComplete={handleImageAnalysis} />
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
+                                            <Sparkles size={14} className="text-purple-500" />
+                                            Análisis Visual
+                                        </label>
+                                        <ImageAnalyzer onAnalysisComplete={handleImageAnalysis} />
+                                    </div>
+
+                                    {/* Reference Images Section */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Imágenes de Referencia</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => appendImage({ url: '' })} // Helper for images
+                                                className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                                            >
+                                                <Plus size={12} /> Agregar URL
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {imageFields.map((field, index) => (
+                                                <div key={field.id} className="relative group aspect-square bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden border dark:border-slate-700">
+                                                    {isUrl(getValues(`referenceImages.${index}.url`)) ? (
+                                                        <img
+                                                            src={getValues(`referenceImages.${index}.url`)}
+                                                            alt="Referencia"
+                                                            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => {
+                                                                setLightboxIndex(index);
+                                                                setLightboxOpen(true);
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-gray-400">
+                                                            <ImageIcon size={20} />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Input Overlay */}
+                                                    <input
+                                                        {...register(`referenceImages.${index}.url`)}
+                                                        className="absolute bottom-0 left-0 w-full text-[10px] bg-black/50 text-white p-1 border-none outline-none backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        placeholder="Pegar URL..."
+                                                    />
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeImage(index)}
+                                                        className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {imageFields.length === 0 && (
+                                                <div className="col-span-3 text-center py-4 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-lg text-gray-400 text-xs">
+                                                    Sin imágenes de referencia
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -410,12 +482,22 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
 
                         {/* AI Suggestions Sidebar (Top Half) */}
                         <div className="flex-1 overflow-y-auto border-b border-gray-200 dark:border-slate-800 relative bg-white dark:bg-slate-900">
-                            {folioType === 'Base/Especial' && (
-                                <div className="p-4 border-b border-gray-100 dark:border-slate-800 bg-amber-50/50 dark:bg-amber-900/10">
-                                    <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Estructura Visual</h4>
-                                    <VisualCakeBuilder tiers={tierFields} shape={allValues.shape} />
-                                </div>
-                            )}
+                            {/* Always show Visual Builder */}
+                            <div className="p-4 border-b border-gray-100 dark:border-slate-800 bg-amber-50/50 dark:bg-amber-900/10">
+                                <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Estructura Visual</h4>
+                                <VisualCakeBuilder
+                                    tiers={
+                                        folioType === 'Base/Especial'
+                                            ? tierFields
+                                            : [{
+                                                persons: allValues.persons,
+                                                flavor: allValues.cakeFlavor?.join(', '),
+                                                filling: allValues.filling?.join(', ')
+                                            }]
+                                    }
+                                    shape={allValues.shape}
+                                />
+                            </div>
 
                             {/* NEW: Label Preview for all types */}
                             <div className="p-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
@@ -496,6 +578,13 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
                     </div>
                 </div>
             </div>
+            {/* Lightbox Container */}
+            <Lightbox
+                open={lightboxOpen}
+                close={() => setLightboxOpen(false)}
+                index={lightboxIndex}
+                slides={imageFields.map(field => ({ src: field.url }))}
+            />
         </form>
     );
 };

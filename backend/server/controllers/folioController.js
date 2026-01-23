@@ -212,6 +212,12 @@ exports.createFolio = async (req, res) => {
 
         await t.commit();
         console.log(`✅ Folio ${newFolio.folioNumber} creado exitosamente en Branch ${tenantBranchId}.`);
+
+        // [SOCKET.IO] Emit event
+        if (req.io) {
+            req.io.to(`branch-${tenantBranchId}`).emit('folio:created', newFolio);
+        }
+
         res.status(201).json(newFolio);
 
         // ... (Async tasks: PDF, WhatsApp) ...
@@ -512,6 +518,13 @@ exports.updateFolio = async (req, res) => {
         console.log(`✅ Folio ${folio.folioNumber} actualizado exitosamente.`);
         // Devolver el folio actualizado
         const updatedFolio = await Folio.findByPk(folioId, { include: [{ model: Client, as: 'client', required: false }] }); // Volver a buscar con cliente
+
+        // [SOCKET.IO] Emit event
+        if (req.io) {
+            const tenantBranchId = req.tenant ? req.tenant.branchId : folio.branchId;
+            req.io.to(`branch-${tenantBranchId}`).emit('folio:updated', updatedFolio);
+        }
+
         res.status(200).json(updatedFolio);
 
     } catch (error) {
@@ -574,6 +587,12 @@ exports.deleteFolio = async (req, res) => {
 
         await t.commit();
         console.log(`✅ Folio ${folioNumber} eliminado correctamente.`);
+
+        // [SOCKET.IO] Emit event
+        if (req.io) {
+            req.io.to(`branch-${folio.branchId}`).emit('folio:deleted', { id: folioId });
+        }
+
         res.status(200).json({ message: 'Folio eliminado correctamente' });
 
     } catch (error) {

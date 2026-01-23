@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext'; // [SOCKET.IO] Import useSocket
 import KPICard from '../components/dashboard/KPICard';
 import OrdersTable from '../components/dashboard/OrdersTable';
 import { mockStats, mockOrders } from '../utils/constants';
@@ -8,75 +9,96 @@ import api from '../services/api';
 const Dashboard = () => {
     // Keep auth hooks for permission checks if needed in future
     const { user, currentBranch, hasPermission } = useAuth();
+    const socket = useSocket(); // [SOCKET.IO] Use hook
 
     const [stats, setStats] = useState([]);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const fetchDashboardData = async () => {
+        try {
+            const response = await api.get('/dashboard/daily-summary');
+            const { revenue, orders: activeOrders, pendingCount, completedCount } = response.data.stats;
+
+            // Map backend stats to KPICard format
+            const newStats = [
+                {
+                    title: 'Ingresos Totales',
+                    value: revenue,
+                    prefix: '$',
+                    icon: 'CurrencyDollarIcon',
+                    color: 'text-indigo-600',
+                    bg: 'bg-indigo-100'
+                },
+                {
+                    title: 'Pedidos Hoy',
+                    value: activeOrders, // Total Active (not completed/cancelled)
+                    icon: 'ShoppingBagIcon',
+                    color: 'text-pink-600',
+                    bg: 'bg-pink-100'
+                },
+                {
+                    title: 'Entregados',
+                    value: completedCount || 0,
+                    icon: 'CheckCircleIcon',
+                    color: 'text-emerald-600',
+                    bg: 'bg-emerald-100'
+                },
+                {
+                    title: 'Pendientes',
+                    value: pendingCount || 0,
+                    icon: 'ClockIcon',
+                    color: 'text-amber-600',
+                    bg: 'bg-amber-100'
+                }
+            ];
+
+            setStats(newStats);
+            setOrders(response.data.recentOrders);
+        } catch (error) {
+            console.error("Error fetching dashboard data", error);
+            // Fallback to mock data on error? Or just show empty/error state
+            // using mock data for now if error, to keep UI usable in dev
+            setStats(mockStats);
+            setOrders(mockOrders);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Fetch data from backend
     useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const response = await api.get('/dashboard/daily-summary');
-                const { revenue, orders: activeOrders, pendingCount, completedCount } = response.data.stats;
-
-                // Map backend stats to KPICard format
-                const newStats = [
-                    {
-                        title: 'Ingresos Totales',
-                        value: revenue,
-                        prefix: '$',
-                        icon: 'CurrencyDollarIcon',
-                        color: 'text-indigo-600',
-                        bg: 'bg-indigo-100'
-                    },
-                    {
-                        title: 'Pedidos Hoy',
-                        value: activeOrders, // Total Active (not completed/cancelled)
-                        icon: 'ShoppingBagIcon',
-                        color: 'text-pink-600',
-                        bg: 'bg-pink-100'
-                    },
-                    {
-                        title: 'Entregados',
-                        value: completedCount || 0,
-                        icon: 'CheckCircleIcon',
-                        color: 'text-emerald-600',
-                        bg: 'bg-emerald-100'
-                    },
-                    {
-                        title: 'Pendientes',
-                        value: pendingCount || 0,
-                        icon: 'ClockIcon',
-                        color: 'text-amber-600',
-                        bg: 'bg-amber-100'
-                    }
-                ];
-
-                setStats(newStats);
-                setOrders(response.data.recentOrders);
-            } catch (error) {
-                console.error("Error fetching dashboard data", error);
-                // Fallback to mock data on error? Or just show empty/error state
-                // using mock data for now if error, to keep UI usable in dev
-                setStats(mockStats);
-                setOrders(mockOrders);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         if (currentBranch) {
             fetchDashboardData();
         }
     }, [currentBranch]);
+
+    // [SOCKET.IO] Listen for updates
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleUpdate = (data) => {
+            console.log('🔔 Dashboard Update Received:', data);
+            fetchDashboardData();
+        };
+
+        socket.on('folio:created', handleUpdate);
+        socket.on('folio:updated', handleUpdate);
+        socket.on('folio:deleted', handleUpdate);
+
+        return () => {
+            socket.off('folio:created', handleUpdate);
+            socket.off('folio:updated', handleUpdate);
+            socket.off('folio:deleted', handleUpdate);
+        };
+    }, [socket, currentBranch]);
 
     return (
         <div className="space-y-8">
             {/* Header Section */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Hola, {user?.username || 'Usuario'} 👋
+                    Hola mariodep, aquí es el resumen de hoy de las ventas
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400">
                     Aquí está el resumen de hoy en {currentBranch?.name || 'la pastelería'}.
@@ -120,15 +142,19 @@ const Dashboard = () => {
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                         <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Actividad Reciente</h3>
                         <div className="space-y-4">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="flex gap-3">
-                                    <div className="w-2 h-2 mt-2 rounded-full bg-indigo-500 shrink-0"></div>
+                            {orders.length > 0 ? orders.slice(0, 5).map((order) => (
+                                <div key={order.id} className="flex gap-3 items-center">
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${order.isUrgent ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`}></div>
                                     <div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-300">Nuevo pedido registrado</p>
-                                        <p className="text-xs text-gray-400">Hace {i * 15} minutos</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                                            Pedido de <strong>{order.customer}</strong> por ${order.total}
+                                        </p>
+                                        <p className="text-xs text-gray-400">{order.timestamp ? new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente'}</p>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <p className="text-sm text-gray-500">No hay actividad reciente.</p>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -1,57 +1,58 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { Draggable } from '@hello-pangea/dnd';
 import { Calendar, Clock, User } from 'lucide-react';
 
-const KanbanCard = ({ folio, activeColor }) => {
+const KanbanCard = ({ folio, activeColor, index }) => {
     return (
-        <motion.div
-            layoutId={folio.id}
-            draggable="true"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            whileHover={{ scale: 1.02, boxShadow: "0px 5px 15px rgba(0,0,0,0.1)" }}
-            whileTap={{ scale: 0.98, cursor: "grabbing" }}
-            className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 cursor-grab mb-3 relative overflow-hidden group"
-        >
-            <div className={`absolute top-0 left-0 w-1 h-full ${activeColor}`}></div>
+        <Draggable draggableId={folio.id.toString()} index={index}>
+            {(provided, snapshot) => (
+                <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}
+                    className={`bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 cursor-grab mb-3 relative overflow-hidden group hover:shadow-md transition-shadow
+                    ${snapshot.isDragging ? 'shadow-2xl ring-2 ring-indigo-400 opacity-90' : ''}`}
+                    style={{ ...provided.draggableProps.style }}
+                >
+                    <div className={`absolute top-0 left-0 w-1 h-full ${activeColor}`}></div>
 
-            <div className="flex justify-between items-start mb-2">
-                <span className="font-bold text-gray-800 dark:text-white text-lg">#{folio.folioNumber}</span>
-                <span className="text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
-                    {folio.folioType || 'Normal'}
-                </span>
-            </div>
+                    <div className="flex justify-between items-start mb-2">
+                        <span className="font-bold text-gray-800 dark:text-white text-lg">#{folio.folioNumber}</span>
+                        <span className="text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                            {folio.folioType || 'Normal'}
+                        </span>
+                    </div>
 
-            <div className="flex items-center gap-2 mb-2 text-gray-700 dark:text-gray-300">
-                <User size={14} className="text-gray-400 dark:text-gray-500" />
-                <span className="text-sm font-medium truncate">{folio.client?.name || 'Cliente Casual'}</span>
-            </div>
+                    <div className="flex items-center gap-2 mb-2 text-gray-700 dark:text-gray-300">
+                        <User size={14} className="text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm font-medium truncate">{folio.client?.name || 'Cliente Casual'}</span>
+                    </div>
 
-            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                <div className="flex items-center gap-1">
-                    <Calendar size={12} />
-                    <span>{folio.deliveryDate}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <Clock size={12} />
-                    <span>{folio.deliveryTime}</span>
-                </div>
-            </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        <div className="flex items-center gap-1">
+                            <Calendar size={12} />
+                            <span>{folio.deliveryDate}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Clock size={12} />
+                            <span>{folio.deliveryTime}</span>
+                        </div>
+                    </div>
 
-            {folio.cakeFlavor && (
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate" title={Array.isArray(folio.cakeFlavor) ? folio.cakeFlavor.join(', ') : folio.cakeFlavor}>
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Sabor:</span> {Array.isArray(folio.cakeFlavor) ? folio.cakeFlavor[0] : folio.cakeFlavor}
+                    {folio.cakeFlavor && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate" title={Array.isArray(folio.cakeFlavor) ? folio.cakeFlavor.join(', ') : folio.cakeFlavor}>
+                            <span className="font-semibold text-gray-700 dark:text-gray-300">Sabor:</span> {Array.isArray(folio.cakeFlavor) ? folio.cakeFlavor[0] : folio.cakeFlavor}
+                        </div>
+                    )}
+
+                    {folio.filling && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400 truncate" title={Array.isArray(folio.filling) ? folio.filling.map(f => f.name).join(', ') : folio.filling}>
+                            <span className="font-semibold text-gray-700 dark:text-gray-300">Relleno:</span> {Array.isArray(folio.filling) ? (folio.filling[0]?.name || 'N/A') : folio.filling}
+                        </div>
+                    )}
                 </div>
             )}
-
-            {folio.filling && (
-                <div className="text-xs text-gray-600 dark:text-gray-400 truncate" title={Array.isArray(folio.filling) ? folio.filling.map(f => f.name).join(', ') : folio.filling}>
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Relleno:</span> {Array.isArray(folio.filling) ? (folio.filling[0]?.name || 'N/A') : folio.filling}
-                </div>
-            )}
-
-        </motion.div>
+        </Draggable>
     );
 };
 
