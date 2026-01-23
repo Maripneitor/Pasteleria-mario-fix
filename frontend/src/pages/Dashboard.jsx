@@ -1,313 +1,140 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import ProductionStepper from '../components/ui/ProductionStepper';
-import { motion } from 'framer-motion';
-import QuickActionBar from '../components/dashboard/QuickActionBar';
-import ChalkMetricsBoard from '../components/dashboard/ChalkMetricsBoard';
-import CashClosing from '../components/dashboard/CashClosing';
-import { QRCodeSVG } from 'qrcode.react';
+import KPICard from '../components/dashboard/KPICard';
+import OrdersTable from '../components/dashboard/OrdersTable';
+import { mockStats, mockOrders } from '../utils/constants';
 import api from '../services/api';
-import CakeLoader from '../components/CakeLoader';
-import EmptyState from '../components/EmptyState';
-
-import { DollarSign, Package, Clock, PlusCircle, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 
 const Dashboard = () => {
-    const { user, currentBranch, hasPermission, getUserRoleLabel } = useAuth();
-    const navigate = useNavigate();
+    // Keep auth hooks for permission checks if needed in future
+    const { user, currentBranch, hasPermission } = useAuth();
 
-    const roleLabel = getUserRoleLabel();
+    const [stats, setStats] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const [inviteToken, setInviteToken] = React.useState(null);
-    const [showQrModal, setShowQrModal] = React.useState(false);
-
-    // Real Data State
-    const [dailyStats, setDailyStats] = React.useState({
-        totalSales: 0,
-        activeOrders: 0,
-        pendingOrders: 0,
-        realIncome: 0,
-        pendingBalance: 0
-    });
-    const [loadingStats, setLoadingStats] = React.useState(true);
-
+    // Fetch data from backend
     useEffect(() => {
-        const fetchStats = async () => {
-            if (hasPermission('dashboard.view_stats') && currentBranch) {
-                setLoadingStats(true);
-                try {
-                    // Assuming API handles branch filtering via header
-                    const response = await api.get('/dashboard/daily-summary');
-                    setDailyStats({
-                        totalSales: response.data.totalSales || 0,
-                        activeOrders: response.data.activeOrders || 0,
-                        pendingOrders: response.data.pendingOrders || 0,
-                        realIncome: response.data.realIncome || 0,
-                        pendingBalance: response.data.pendingBalance || 0
-                    });
-                } catch (error) {
-                    console.error("Error fetching dashboard stats:", error);
-                } finally {
-                    setLoadingStats(false);
-                }
-            } else {
-                setLoadingStats(false);
+        const fetchDashboardData = async () => {
+            try {
+                const response = await api.get('/dashboard/daily-summary');
+                const { revenue, orders: activeOrders, pendingCount, completedCount } = response.data.stats;
+
+                // Map backend stats to KPICard format
+                const newStats = [
+                    {
+                        title: 'Ingresos Totales',
+                        value: revenue,
+                        prefix: '$',
+                        icon: 'CurrencyDollarIcon',
+                        color: 'text-indigo-600',
+                        bg: 'bg-indigo-100'
+                    },
+                    {
+                        title: 'Pedidos Hoy',
+                        value: activeOrders, // Total Active (not completed/cancelled)
+                        icon: 'ShoppingBagIcon',
+                        color: 'text-pink-600',
+                        bg: 'bg-pink-100'
+                    },
+                    {
+                        title: 'Entregados',
+                        value: completedCount || 0,
+                        icon: 'CheckCircleIcon',
+                        color: 'text-emerald-600',
+                        bg: 'bg-emerald-100'
+                    },
+                    {
+                        title: 'Pendientes',
+                        value: pendingCount || 0,
+                        icon: 'ClockIcon',
+                        color: 'text-amber-600',
+                        bg: 'bg-amber-100'
+                    }
+                ];
+
+                setStats(newStats);
+                setOrders(response.data.recentOrders);
+            } catch (error) {
+                console.error("Error fetching dashboard data", error);
+                // Fallback to mock data on error? Or just show empty/error state
+                // using mock data for now if error, to keep UI usable in dev
+                setStats(mockStats);
+                setOrders(mockOrders);
+            } finally {
+                setLoading(false);
             }
         };
 
-        if (user) {
-            fetchStats();
+        if (currentBranch) {
+            fetchDashboardData();
         }
-    }, [user, currentBranch?.id, hasPermission]); // Reactive to branch change
-
-    const generateInvite = async () => {
-        if (!hasPermission('users.invite')) {
-            alert("No tienes permiso para invitar usuarios.");
-            return;
-        }
-        try {
-            const response = await api.post('/auth/generate-invite');
-            setInviteToken(response.data.token);
-            setShowQrModal(true);
-        } catch (error) {
-            console.error("Error generating invite:", error);
-            alert("Error generando invitación.");
-        }
-    };
-
-    // Animation Variants
-    const letterVariants = {
-        hidden: { opacity: 0, y: 50 },
-        visible: { opacity: 1, y: 0 },
-    };
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: (i = 1) => ({
-            opacity: 1,
-            transition: { staggerChildren: 0.12, delayChildren: 0.04 * i },
-        }),
-    };
-
-    const heading = "Bienvenido a La Fiesta";
+    }, [currentBranch]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-red-50 dark:from-bakery-950 dark:via-slate-900 dark:to-bakery-900 font-sans text-gray-900 dark:text-white">
+        <div className="space-y-8">
+            {/* Header Section */}
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Hola, {user?.username || 'Usuario'} 👋
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400">
+                    Aquí está el resumen de hoy en {currentBranch?.name || 'la pastelería'}.
+                </p>
+            </div>
 
-            {/* Conditional Global Loader if initial page load depends on heavy calls, but here we use localized loaders mostly. 
-                Using CakeLoader for stats specifically if we want to block interaction, OR inline skeletons. 
-                Let's use CakeLoader for the initial transition only if strictly needed, or just let skeletons handle it.
-            */}
+            {/* KPI Cards Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {stats.map((stat, index) => (
+                    <KPICard
+                        key={index}
+                        title={stat.title}
+                        value={stat.value}
+                        prefix={stat.prefix}
+                        icon={stat.icon}
+                        color={stat.color}
+                        bg={stat.bg}
+                    />
+                ))}
+            </div>
 
-            <main className="w-full max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-10">
-                <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    variants={containerVariants}
-                    className="space-y-10"
-                >
-                    {/* Header Section */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            {/* Text Reveal Title */}
-                            <motion.h1
-                                className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-600 tracking-tight"
-                                variants={containerVariants}
-                                initial="hidden"
-                                animate="visible"
-                            >
-                                {heading.split("").map((char, index) => (
-                                    <motion.span key={index} variants={letterVariants} transition={{ duration: 0.5 }}>
-                                        {char}
-                                    </motion.span>
-                                ))}
-                            </motion.h1>
-                            <motion.p variants={letterVariants} className="text-gray-400 mt-2 font-medium flex items-center gap-2">
-                                Panel de {roleLabel}
-                                {currentBranch && <span className="text-xs bg-bakery-100 text-bakery-800 px-2 py-0.5 rounded-full border border-bakery-200">@{currentBranch.name}</span>}
-                            </motion.p>
-                        </div>
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Orders Table - Takes up 2 columns */}
+                <div className="lg:col-span-2">
+                    <OrdersTable orders={orders} />
+                </div>
 
-                        <motion.div variants={letterVariants}>
-                            <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm flex items-center gap-2 bg-white dark:bg-slate-800 dark:border-slate-700`}>
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                {user?.username}
-                            </div>
-                        </motion.div>
+                {/* Right Column - Placeholders for additional widgets */}
+                <div className="space-y-6">
+                    {/* Urgency / Alerts Widget Placeholder */}
+                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+                        <h3 className="font-bold text-lg mb-2">Pedidos Urgentes</h3>
+                        <p className="opacity-90 text-sm mb-4">Tienes 2 pedidos marcados como urgentes para hoy.</p>
+                        <button className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors">
+                            Ver Detalles
+                        </button>
                     </div>
 
-                    {/* Quick Actions Bar */}
-                    <QuickActionBar />
-
-                    {/* Stats Section with Local Loading State */}
-                    {hasPermission('dashboard.view_stats') && (
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                            {/* Stats Column */}
-                            <div className="lg:col-span-8 space-y-8">
-                                <motion.div
-                                    className="grid grid-cols-1 sm:grid-cols-3 gap-6"
-                                    variants={containerVariants}
-                                >
-                                    <StatCard
-                                        title="Ventas del Día"
-                                        value={loadingStats ? "..." : `$${(dailyStats.totalSales || 0).toLocaleString()}`}
-                                        icon={<DollarSign size={24} />}
-                                        color="bg-green-100 text-green-600"
-                                        delay={0.1}
-                                        isLoading={loadingStats}
-                                    />
-                                    <StatCard
-                                        title="Ingreso Real (Hoy)"
-                                        value={loadingStats ? "..." : `$${(dailyStats.realIncome || 0).toLocaleString()}`}
-                                        icon={<Package size={24} />}
-                                        color="bg-blue-100 text-blue-600"
-                                        delay={0.2}
-                                        isLoading={loadingStats}
-                                    />
-                                    <StatCard
-                                        title="Saldo Pendiente"
-                                        value={loadingStats ? "..." : `$${(dailyStats.pendingBalance || 0).toLocaleString()}`}
-                                        icon={<Clock size={24} />}
-                                        color="bg-yellow-100 text-yellow-600"
-                                        delay={0.3}
-                                        isLoading={loadingStats}
-                                    />
-                                </motion.div>
-
-                                {/* Main Graph/Content Area */}
-                                <motion.div variants={letterVariants}>
-                                    <ChalkMetricsBoard />
-                                </motion.div>
-                            </div>
-
-                            {/* Notifications Area */}
-                            <div className="lg:col-span-4 space-y-6 flex flex-col items-center lg:items-end">
-                                {/* Placeholders or real notifications */}
-                            </div>
+                    {/* Simple Activity Feed Placeholder */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Actividad Reciente</h3>
+                        <div className="space-y-4">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex gap-3">
+                                    <div className="w-2 h-2 mt-2 rounded-full bg-indigo-500 shrink-0"></div>
+                                    <div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300">Nuevo pedido registrado</p>
+                                        <p className="text-xs text-gray-400">Hace {i * 15} minutos</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    )}
-
-                    {/* Operational Actions */}
-                    {(hasPermission('folios.create') || hasPermission('calendar.view')) && (
-                        <div className="space-y-6">
-                            <motion.div
-                                className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                                variants={containerVariants}
-                            >
-                                <DashboardAction
-                                    title="Nuevo Pedido"
-                                    desc="Crear orden personalizada"
-                                    color="from-red-500 to-red-600"
-                                    onClick={() => navigate('/folio/nuevo')}
-                                    icon={<PlusCircle className="w-8 h-8 text-white" />}
-                                />
-                                <DashboardAction
-                                    title="Ver Calendario"
-                                    desc="Consultar fechas de entrega"
-                                    color="from-blue-500 to-blue-600"
-                                    onClick={() => navigate('/calendario')}
-                                    icon={<CalendarIcon className="w-8 h-8 text-white" />}
-                                />
-                                {hasPermission('users.invite') && (
-                                    <>
-                                        <DashboardAction
-                                            title="Registrar Empleado"
-                                            desc="Invitar vía QR"
-                                            color="from-amber-600 to-amber-700"
-                                            onClick={generateInvite}
-                                            icon={<UserPlus className="w-8 h-8 text-white" />}
-                                        />
-                                        {showQrModal && (
-                                            <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowQrModal(false)}>
-                                                <div className="bg-white p-8 rounded-3xl max-w-sm w-full text-center space-y-4 animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                                                    <h3 className="text-2xl font-bold text-gray-800">Escanea para Unirte</h3>
-                                                    <p className="text-gray-500 text-sm">Este código vincula al nuevo empleado contigo.</p>
-                                                    <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-200 inline-block">
-                                                        {inviteToken && (
-                                                            <QRCodeSVG
-                                                                value={`${window.location.origin}/register?inviteToken=${inviteToken}`}
-                                                                size={200}
-                                                                level="H"
-                                                                includeMargin={true}
-                                                                imageSettings={{
-                                                                    src: "/vite.svg",
-                                                                    x: undefined,
-                                                                    y: undefined,
-                                                                    height: 24,
-                                                                    width: 24,
-                                                                    excavate: true,
-                                                                }}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <p className="text-xs text-gray-400">Válido por 24 horas</p>
-                                                    <button onClick={() => setShowQrModal(false)} className="w-full py-3 rounded-xl bg-gray-100 font-bold text-gray-600 hover:bg-gray-200">Cerrar</button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </motion.div>
-
-                            {/* CASH CLOSING */}
-                            {(hasPermission('cash.close') || hasPermission('dashboard.view_stats')) && (
-                                <motion.div variants={letterVariants}>
-                                    <CashClosing />
-                                </motion.div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Production View */}
-                    {hasPermission('production.view') && (
-                        <motion.div className="max-w-3xl mx-auto space-y-10" variants={containerVariants}>
-                            {/* Mock Data for visual - Should be replaced with real production feed ideally */}
-                            <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300">Producción en Curso</h3>
-                            <EmptyState message="No hay órdenes en producción activas en esta vista rápida." subMessage="Revisa el tablero de Kanban completo." />
-                        </motion.div>
-                    )}
-                </motion.div>
-            </main>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
-
-// Sub-components
-const StatCard = ({ title, value, icon, color, isLoading }) => (
-    <motion.div
-        whileHover={{ y: -5, scale: 1.02 }}
-        className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center space-x-4 transition-all duration-300"
-    >
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${color}`}>{icon}</div>
-        <div>
-            <h3 className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider">{title}</h3>
-            {isLoading ? (
-                <div className="h-8 w-24 bg-gray-200 dark:bg-slate-700 rounded animate-pulse mt-1"></div>
-            ) : (
-                <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{value}</p>
-            )}
-        </div>
-    </motion.div>
-);
-
-const DashboardAction = ({ title, desc, color, onClick, icon }) => (
-    <motion.button
-        whileHover={{ scale: 0.98 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onClick}
-        className={`relative overflow-hidden w-full h-48 rounded-3xl shadow-lg shadow-gray-200/50 dark:shadow-none flex flex-col justify-end p-6 text-left group bg-gradient-to-br ${color}`}
-    >
-        <div className="absolute top-6 right-6 p-3 bg-white/20 backdrop-blur-sm rounded-2xl group-hover:rotate-12 transition-transform duration-300">
-            {icon}
-        </div>
-        <div className="relative z-10">
-            <h3 className="text-2xl font-bold text-white mb-1">{title}</h3>
-            <p className="text-white/80 font-medium">{desc}</p>
-        </div>
-        {/* Shimmer Effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-    </motion.button>
-);
 
 export default Dashboard;

@@ -4,12 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-white text-gray-900 transition-colors duration-300;
-}
+@layer base {
+  body {
+    @apply bg-white text-gray-900 transition-colors duration-300;
+  }
 
-.dark body {
-  @apply bg-bakery-950 text-bakery-milk;
+  .dark body {
+    /* Aquí ya no fallará porque bakery-950 y bakery-milk están en el config */
+    @apply bg-bakery-950 text-bakery-milk;
+  }
 }
 
 h1,

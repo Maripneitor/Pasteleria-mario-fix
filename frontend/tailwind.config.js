@@ -9,26 +9,14 @@ export default {
         extend: {
             colors: {
                 bakery: {
-                    // Professional Slate Palette
-                    // Light Mode
-                    50: '#F8FAFC', // Slate-50: Background Light
-                    100: '#F1F5F9', // Slate-100: Secondary Background
-                    200: '#E2E8F0', // Slate-200: Borders / Disabled
-
-                    // Main Text / Elements
-                    500: '#64748B', // Slate-500: Muted Text
-                    600: '#475569', // Slate-600
-                    700: '#334155', // Slate-700: Dark Mode Borders
-                    800: '#1E293B', // Slate-800: Dark Mode Cards / Light Mode Text
-                    900: '#0F172A', // Slate-900
-                    950: '#020617', // Slate-950: Dark Mode Background
-
-                    // Semantic Aliases
-                    primary: '#3B82F6', // Blue-500: Primary Action
-                    'primary-hover': '#2563EB', // Blue-600
-                    success: '#10B981', // Emerald-500
-                    error: '#EF4444', // Red-500
-                    warning: '#F59E0B', // Amber-500
+                    milk: '#fdfcf0',   // Crema suave
+                    primary: '#ef4444', // Rojo marca
+                    50: '#fef2f2',
+                    100: '#fee2e2',
+                    700: '#b91c1c',
+                    800: '#991b1b',
+                    900: '#7f1d1d',
+                    950: '#1a0d0d',    // Fondo oscuro profundo
                 },
             },
             fontFamily: {

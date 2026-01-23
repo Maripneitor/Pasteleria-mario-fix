@@ -4,7 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { SystemLogProvider } from './context/SystemLogContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastSystem';
-import Layout from './components/Layout';
+import DashboardLayout from './components/layout/DashboardLayout';
 import PageTransition from './components/layout/PageTransition';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
@@ -53,7 +53,7 @@ function App() {
                       <Route path="/register" element={<Register />} />
 
                       {/* Protected Routes Wrapper */}
-                      <Route element={<Layout />}>
+                      <Route element={<DashboardLayout />}>
                         {/* Developer Only Route (Hidden) */}
                         <Route element={<ProtectedRoute allowedRoles={['Desarrollador']} />}>
                           <Route path="/dev-dashboard" element={<DevDashboard />} />
