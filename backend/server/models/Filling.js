@@ -42,7 +42,9 @@ const Filling = sequelize.define('Filling', {
     // Por simplicidad para la migración, asumiremos que todos los rellenos base están disponibles,
     // y la lógica de "Especiales" en frontend podría filtrar si es necesario, pero por ahora lo dejamos genérico.
 }, {
-    timestamps: false
+    tableName: 'fillings',
+    timestamps: true,
+    paranoid: true
 });
 
 module.exports = Filling;

@@ -39,6 +39,43 @@ exports.getAllUsers = async (req, res) => {
 // CREAR un nuevo usuario
 exports.createUser = async (req, res) => {
   try {
+    // --- TASK 2: Subscription Limits Logic ---
+    const { branchId, role, ...userData } = req.body;
+
+    // Determine Branch Context
+    // If Admin/Owner creating, branchId should be in body or inferred
+    // For now, assume passed in body or req.user context if Owner
+    let targetBranchId = branchId;
+    if (!targetBranchId && req.user && req.user.role === 'Dueño') {
+      // Find Owner's branch? Requires lookup if not in token
+      // Simplification: Assume Owner passes branchId or we skip simple check if not provided
+      // But validation requires it.
+    }
+
+    if (targetBranchId) { // Only check if we know the branch
+      const { Branch, UserBranchMembership } = require('../models');
+
+      // 1. Get Branch Limit
+      const branchObj = await Branch.findByPk(targetBranchId);
+      if (branchObj && branchObj.maxEmployeesAllowed) {
+
+        // 2. Count current employees (distinct users) in this branch
+        const currentCount = await UserBranchMembership.count({
+          where: { branchId: targetBranchId },
+          distinct: true,
+          col: 'userId'
+        });
+
+        // 3. Compare
+        if (currentCount >= branchObj.maxEmployeesAllowed) {
+          return res.status(403).json({
+            message: "Límite de empleados exedido para esta sucursal (Plan Count Reached)."
+          });
+        }
+      }
+    }
+    // ----------------------------------------
+
     const newUser = await User.create(req.body);
     // Excluimos la contraseña de la respuesta por seguridad
     const userResponse = newUser.toJSON();

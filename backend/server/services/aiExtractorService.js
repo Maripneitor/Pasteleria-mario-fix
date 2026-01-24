@@ -37,7 +37,7 @@ async function getInitialExtraction(conversationText) {
             fillingsTxt = dbFillings.map(f => f.name).join(', ');
         }
         console.log("📝 Catálogos cargados para IA:", { flavorsCount: dbFlavors.length, fillingsCount: dbFillings.length });
-        
+
     } catch (dbError) {
         console.error("⚠️ Advertencia: No se pudieron cargar los catálogos de la BD para la IA. Se continuará sin ellos.", dbError.message);
         // No lanzamos error fatal para que el servicio siga funcionando aunque falle la BD momentáneamente
@@ -202,6 +202,58 @@ async function getInitialExtraction(conversationText) {
                 extractedData[key] = null;
             }
         });
+
+        // --- NEW: Map Strings to IDs (Flavor/Filling) ---
+        // Only for Normal type as per current simple model, or adapt for Special if needed.
+        // For now, we take the primary (first) flavor/filling if available.
+
+        extractedData.flavorId = null;
+        extractedData.fillingId = null;
+        extractedData.missingFlavor = null;
+        extractedData.missingFilling = null;
+
+        if (extractedData.folioType === 'Normal') {
+            // Resolve Flavor ID
+            if (extractedData.cakeFlavor && extractedData.cakeFlavor.length > 0) {
+                const flavorName = extractedData.cakeFlavor[0]; // Take first
+                const flavor = await Flavor.findOne({
+                    where: {
+                        name: flavorName,
+                        isActive: true // Assuming active check
+                    }
+                });
+
+                if (flavor) {
+                    extractedData.flavorId = flavor.id;
+                } else {
+                    extractedData.missingFlavor = flavorName;
+                    console.warn(`⚠️ Flavor not found in DB: ${flavorName}`);
+                }
+            }
+
+            // Resolve Filling ID
+            if (extractedData.filling && extractedData.filling.length > 0) {
+                const fillingName = extractedData.filling[0]; // Take first
+                const fillingObj = await Filling.findOne({
+                    where: {
+                        name: fillingName,
+                        isActive: true
+                    }
+                });
+
+                if (fillingObj) {
+                    extractedData.fillingId = fillingObj.id;
+                } else {
+                    extractedData.missingFilling = fillingName;
+                    console.warn(`⚠️ Filling not found in DB: ${fillingName}`);
+                }
+            }
+        }
+        // For 'Base/Especial', the tiered structure is complex. 
+        // Logic for mapping tiered flavors would go here if needed.
+        // Currently leaving as null for controller to handle or default.
+
+        // ------------------------------------------------
 
         console.log("✅ Datos extraídos y procesados:", JSON.stringify(extractedData, null, 2));
         return extractedData;

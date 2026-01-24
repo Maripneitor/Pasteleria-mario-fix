@@ -21,6 +21,8 @@ const Payment = require('./Payment');
 const FolioStatusHistory = require('./FolioStatusHistory');
 const FolioNote = require('./FolioNote');
 const FolioAttachment = require('./FolioAttachment');
+const FolioHistory = require('./FolioHistory');
+
 
 // --- ASOCIACIONES RBAC ---
 User.belongsToMany(Role, { through: UserRole, foreignKey: 'user_id', as: 'roles' });
@@ -47,5 +49,5 @@ Folio.belongsTo(Client, { as: 'client', foreignKey: 'clientId' });
 module.exports = {
   sequelize, User, Client, Folio, FolioEditHistory, Commission, AISession, Flavor, Filling, SystemLog,
   Organization, Branch, UserBranchMembership, Role, Permission, RolePermission, UserRole,
-  Payment, FolioStatusHistory, FolioNote, FolioAttachment
+  Payment, FolioStatusHistory, FolioNote, FolioAttachment, FolioHistory
 };

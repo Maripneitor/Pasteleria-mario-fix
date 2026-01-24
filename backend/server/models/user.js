@@ -32,7 +32,8 @@ const User = sequelize.define('User', {
   },
   permissions: { type: DataTypes.JSON, defaultValue: {} }
 }, {
-  tableName: 'users'
+  tableName: 'users',
+  paranoid: true
 });
 
 module.exports = User;

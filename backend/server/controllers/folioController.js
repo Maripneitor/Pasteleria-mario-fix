@@ -3,7 +3,7 @@ const path = require('path');
 const { format, parseISO, startOfWeek, endOfWeek, getDate, getMonth, lastDayOfMonth } = require('date-fns');
 const { es } = require('date-fns/locale');
 // Asegúrate que sequelize esté correctamente importado aquí desde ../models o ../config/database
-const { Folio, Client, User, FolioEditHistory, Commission, sequelize, Flavor, Filling } = require('../models');
+const { Folio, Client, User, FolioEditHistory, FolioHistory, Commission, sequelize, Flavor, Filling } = require('../models');
 const { Op } = require('sequelize');
 const pdfService = require('../services/pdfService');
 
@@ -193,11 +193,20 @@ exports.createFolio = async (req, res) => {
             responsibleUserId: req.user?.id || null,
             imageUrls: imageUrls.length > 0 ? imageUrls : null,
             imageComments: finalImageComments.some(c => c !== null) ? finalImageComments : null,
-            tiers: tiersData.length > 0 ? tiersData : null,
+            clientId: client.id,
+            responsibleUserId: req.user?.id || null,
+            imageUrls: imageUrls.length > 0 ? imageUrls : null,
+            imageComments: finalImageComments.some(c => c !== null) ? finalImageComments : null,
+            // tiers: tiersData.length > 0 ? tiersData : null, // Removed from model
             accessories: accessories || null,
             additional: additionalData.length > 0 ? additionalData : null,
-            cakeFlavor: cakeFlavorData.length > 0 ? cakeFlavorData : null,
-            filling: fillingData.length > 0 ? fillingData : null,
+
+            // Updated Fields for IDs
+            flavorId: folioData.flavorId || null,
+            fillingId: folioData.fillingId || null,
+            // cakeFlavor: cakeFlavorData.length > 0 ? cakeFlavorData : null, // Legacy removed
+            // filling: fillingData.length > 0 ? fillingData : null, // Legacy removed
+
             complements: complementsData.length > 0 ? complementsData : null,
             isPaid: finalIsPaidStatus,
             hasExtraHeight: hasExtraHeight === 'true' || hasExtraHeight === true,
@@ -480,40 +489,64 @@ exports.updateFolio = async (req, res) => {
         });
 
 
+        // Capture Old Data for Audit
+        const oldData = folio.toJSON();
+
         // Datos para actualizar en el folio
         const updateData = {
-            ...folioData, // folioType, persons, shape, etc., si vienen en req.body
+            ...folioData,
             deliveryDate: deliveryDate || folio.deliveryDate,
             deliveryTime: folioData.deliveryTime || folio.deliveryTime,
             total: finalTotal.toFixed(2),
-            advancePayment: finalAdvancePayment.toFixed(2), // <= Usar la variable ajustada
-            balance: balance.toFixed(2),                 // <= Usar el balance recalculado
+            advancePayment: finalAdvancePayment.toFixed(2),
+            balance: balance.toFixed(2),
             imageUrls: finalImageUrls.length > 0 ? finalImageUrls : null,
             imageComments: finalImageComments.some(c => c !== null) ? finalImageComments : null,
-            tiers: tiersData.length > 0 ? tiersData : null,
-            accessories: accessories || null, // Permitir vaciar con null
+            // tiers: tiersData.length > 0 ? tiersData : null, // Removed
+            accessories: accessories || null,
             additional: additionalData.length > 0 ? additionalData : null,
-            cakeFlavor: cakeFlavorData.length > 0 ? cakeFlavorData : null,
-            filling: fillingData.length > 0 ? fillingData : null,
+
+            flavorId: folioData.flavorId || folio.flavorId, // Update ID
+            fillingId: folioData.fillingId !== undefined ? (folioData.fillingId || null) : folio.fillingId, // Update ID (allow clearing)
+
+            // cakeFlavor: cakeFlavorData.length > 0 ? cakeFlavorData : null, // Removed
+            // filling: fillingData.length > 0 ? fillingData : null, // Removed
+
             complements: complementsData.length > 0 ? complementsData : null,
-            isPaid: finalIsPaidStatus, // <= Establecer isPaid basado en el balance real
+            isPaid: finalIsPaidStatus,
             hasExtraHeight: hasExtraHeight === 'true' || hasExtraHeight === true,
-            // Actualizar status solo si se proporciona explícitamente y es válido
             ...(status && ['Pendiente', 'Nuevo', 'En Producción', 'Listo para Entrega', 'Entregado', 'Cancelado'].includes(status) && { status: status })
         };
 
         // Limpiar campos según folioType si este cambia
+        // Not needed for flavor/filling as they are IDs now, but logic remains valid if switching types re: nulling
+        /*
         if (folioData.folioType && folioData.folioType !== folio.folioType) {
             if (folioData.folioType === 'Base/Especial') {
-                updateData.cakeFlavor = null;
-                updateData.filling = null;
-            } else { // Cambia a Normal
-                updateData.tiers = null;
+                 // Maybe clear flavorId if special cakes don't use it? 
+                 // But model says flavorId is NOT NULL. So we must keep it.
+            } else { 
+                // updateData.tiers = null; 
             }
         }
-
+        */
 
         await folio.update(updateData, { transaction: t });
+
+        // --- TASK 3: Audit Log ---
+        // Reload to ensure we have the stored state (or just use updateData merged). 
+        // Using toJSON of updated instance.
+        const newData = folio.toJSON();
+
+        await FolioHistory.create({
+            folioId: folio.id,
+            userId: req.user?.id || null, // Editor
+            branchId: folio.branchId, // From folio
+            action: 'UPDATE',
+            oldData: oldData,
+            newData: newData
+        }, { transaction: t });
+        // -------------------------
 
         // Actualizar o crear registro de comisión
         let commission = await Commission.findOne({ where: { folioId: folio.id }, transaction: t });

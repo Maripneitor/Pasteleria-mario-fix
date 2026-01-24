@@ -37,7 +37,9 @@ const Flavor = sequelize.define('Flavor', {
         comment: 'Disponible para pisos de pasteles especiales'
     }
 }, {
-    timestamps: false
+    tableName: 'flavors',
+    timestamps: true,
+    paranoid: true
 });
 
 module.exports = Flavor;
