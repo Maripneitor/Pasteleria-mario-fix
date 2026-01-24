@@ -8,7 +8,7 @@ async function createDevUser() {
     try {
         const devEmail = 'mario@dev.com';
         const devUsername = 'Mario Dev';
-        const rawPassword = 'password123';
+        const rawPassword = 'Admin1234';
 
         // Check if user exists
         const existingUser = await User.findOne({
@@ -42,7 +42,19 @@ async function createDevUser() {
         });
 
         if (devUser) {
-            console.log("🛠️ Superusuario Mario Dev creado con éxito");
+            // BUSCAR EL ROL ADMINISTRADOR (ID 1) Y VINCULARLO
+            const { Role, UserRole } = require('../server/models'); // Local require to ensure context
+
+            const [role] = await Role.findOrCreate({
+                where: { name: 'Administrador' },
+                defaults: { scope: 'Global', description: 'Admin de Sistema' }
+            });
+
+            await UserRole.findOrCreate({
+                where: { user_id: devUser.id, role_id: role.id }
+            });
+
+            console.log("🛠️ Superusuario Mario Dev creado y vinculado al rol Administrador");
         }
 
     } catch (error) {

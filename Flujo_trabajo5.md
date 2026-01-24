@@ -8,14 +8,11 @@ Usa estos comandos para controlar el entorno de contenedores (Base de Datos, Bac
 docker-compose up -d
 ```
 
-### Reconstrucción total (Obligatorio tras cambios en modelos o dependencias):
-```bash
 docker-compose up --build
 ```
-
-### Limpieza profunda (Borra base de datos y archivos temporales):
-> [!WARNING]
-> ⚠️ Atención: Esto borrará todos los clientes y folios registrados.
+### Apagar el servidor
+```bash
+docker-compose down
 
 ```bash
 docker-compose down -v

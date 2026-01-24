@@ -1,24 +1,32 @@
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+-- ============================================================
+-- PASTELERIA DB - INIT (Schema + Seed)
+-- Compatible con MySQL 8.0.45 (Docker)
+-- ============================================================
 
-# ------------------------------------------------------------
-# DROP (para evitar conflictos al reimportar)
-# ------------------------------------------------------------
+CREATE DATABASE IF NOT EXISTS `pasteleria_db`
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_0900_ai_ci;
+
+USE `pasteleria_db`;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ------------------------------------------------------------
+-- DROP (orden seguro por llaves foráneas)
+-- ------------------------------------------------------------
 DROP TABLE IF EXISTS `user_roles`;
 DROP TABLE IF EXISTS `roles`;
 DROP TABLE IF EXISTS `folio_edit_histories`;
 DROP TABLE IF EXISTS `folios`;
 DROP TABLE IF EXISTS `clients`;
 DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `system_logs`;
 
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: users
-# ------------------------------------------------------------
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ------------------------------------------------------------
+-- TABLE: users
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
@@ -30,17 +38,17 @@ CREATE TABLE IF NOT EXISTS `users` (
   `ownerId` int DEFAULT NULL,
   `dashboardConfig` json DEFAULT NULL,
   `ownerSeal` text,
-  `status` enum('active', 'pending_verification', 'banned') DEFAULT 'active',
+  `status` enum('active','pending_verification','banned') DEFAULT 'active',
   `permissions` json DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: clients
-# ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- TABLE: clients
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `clients` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
@@ -50,15 +58,15 @@ CREATE TABLE IF NOT EXISTS `clients` (
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `phone` (`phone`)
-) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: folios
-# ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- TABLE: folios
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `folios` (
   `id` int NOT NULL AUTO_INCREMENT,
   `folioNumber` varchar(255) NOT NULL,
-  `folioType` enum('Sencillo', 'Especial') NOT NULL,
+  `folioType` enum('Sencillo','Especial') NOT NULL,
   `deliveryDate` date NOT NULL,
   `deliveryTime` time NOT NULL,
   `persons` int NOT NULL,
@@ -67,9 +75,9 @@ CREATE TABLE IF NOT EXISTS `folios` (
   `designDescription` text NOT NULL,
   `dedication` varchar(255) DEFAULT NULL,
   `deliveryLocation` varchar(255) NOT NULL,
-  `total` decimal(10, 2) NOT NULL,
-  `advancePayment` decimal(10, 2) NOT NULL DEFAULT '0.00',
-  `balance` decimal(10, 2) NOT NULL,
+  `total` decimal(10,2) NOT NULL,
+  `advancePayment` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `balance` decimal(10,2) NOT NULL,
   `status` enum('Nuevo','En Producción','Listo para Entrega','Entregado','Cancelado') DEFAULT 'Nuevo',
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
@@ -86,11 +94,11 @@ CREATE TABLE IF NOT EXISTS `folios` (
   CONSTRAINT `folios_ibfk_2`
     FOREIGN KEY (`clientId`) REFERENCES `clients` (`id`)
     ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: folio_edit_histories
-# ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- TABLE: folio_edit_histories
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `folio_edit_histories` (
   `id` int NOT NULL AUTO_INCREMENT,
   `createdAt` datetime NOT NULL,
@@ -105,146 +113,92 @@ CREATE TABLE IF NOT EXISTS `folio_edit_histories` (
   CONSTRAINT `folio_edit_histories_ibfk_2`
     FOREIGN KEY (`editorUserId`) REFERENCES `users` (`id`)
     ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-# ------------------------------------------------------------
-# DATA DUMP FOR TABLE: users
-# ------------------------------------------------------------
-INSERT INTO `users` (`id`, `username`, `email`, `password`, `createdAt`, `updatedAt`)
-VALUES
-  (
-    1,
-    'Isaac',
-    'isaac@lafiesta.com',
-    '$2b$10$/PCP5a2pzLMF6cjs/Hd03u.KN5r8yBymBHxvvsJf6k67p9L0ssi0.',
-    '2025-09-30 01:26:31',
-    '2025-09-30 01:26:31'
-  );
-
-# ------------------------------------------------------------
-# DATA DUMP FOR TABLE: clients
-# ------------------------------------------------------------
-INSERT INTO `clients` (`id`, `name`, `phone`, `createdAt`, `updatedAt`)
-VALUES
-  (
-    1,
-    'Cliente de Prueba',
-    '93278372823',
-    '2025-09-30 01:23:21',
-    '2025-09-30 01:23:21'
-  );
-
-INSERT INTO `clients` (`id`, `name`, `phone`, `createdAt`, `updatedAt`)
-VALUES
-  (
-    2,
-    'Enrique',
-    '9611366965',
-    '2025-09-30 01:25:53',
-    '2025-09-30 01:25:53'
-  );
-
-# ------------------------------------------------------------
-# DATA DUMP FOR TABLE: folios
-# ------------------------------------------------------------
-INSERT INTO `folios` (
-  `id`,
-  `folioNumber`,
-  `folioType`,
-  `deliveryDate`,
-  `deliveryTime`,
-  `persons`,
-  `cakeFlavor`,
-  `filling`,
-  `designDescription`,
-  `dedication`,
-  `deliveryLocation`,
-  `total`,
-  `advancePayment`,
-  `balance`,
-  `status`,
-  `createdAt`,
-  `updatedAt`,
-  `responsibleUserId`,
-  `clientId`
-)
-VALUES
-  (
-    2,
-    'OS-25-6965',
-    'Sencillo',
-    '2025-10-25',
-    '15:00:00',
-    30,
-    'Pan de chocolate',
-    'Relleno de queso crema con zarzamora',
-    'Decorado liso color blanco, con fresas frescas y frambuesas en la parte superior.',
-    '¡Feliz Aniversario!',
-    'Calle Falsa 123, Colonia Centro',
-    950.00,
-    500.00,
-    450.00,
-    'Nuevo',
-    '2025-09-30 01:27:06',
-    '2025-09-30 01:27:06',
-    1,
-    2
-  );
-
-# ------------------------------------------------------------
-# DATA DUMP FOR TABLE: folio_edit_histories
-# ------------------------------------------------------------
--- (Sin registros)
-
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: roles
-# ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- TABLE: roles
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `roles` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `scope` enum('Global', 'Branch') DEFAULT 'Branch',
+  `scope` enum('Global','Branch') DEFAULT 'Branch',
   `description` text,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: user_roles
-# ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- TABLE: user_roles
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `user_roles` (
   `user_id` int NOT NULL,
   `role_id` int NOT NULL,
+  `branch_id` bigint DEFAULT NULL,
   PRIMARY KEY (`user_id`, `role_id`),
+  KEY `branch_id` (`branch_id`),
   CONSTRAINT `user_roles_ibfk_1`
     FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `user_roles_ibfk_2`
     FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-# ------------------------------------------------------------
-# DATA DUMP FOR ROLES & ADMIN
-# ------------------------------------------------------------
-INSERT INTO `roles` (`id`, `name`, `scope`, `description`) VALUES
-(1, 'Admin', 'Global', 'System Administrator'),
-(2, 'Owner', 'Branch', 'Branch Owner'),
-(3, 'Employee', 'Branch', 'Regular Employee');
+-- ------------------------------------------------------------
+-- ✅ TABLE: system_logs (ya completa, sin ALTER manual)
+-- Mantengo `timestamp` por compatibilidad con tu backend actual
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `system_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `level` varchar(255) NOT NULL,
+  `section` varchar(255) DEFAULT NULL,
+  `message` text NOT NULL,
+  `meta` json DEFAULT NULL,
+  `timestamp` datetime DEFAULT CURRENT_TIMESTAMP,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Insertar a Mario Admin con el hash correcto de 'Admin1234'
+-- ============================================================
+-- SEED BASE (roles + admin)
+-- ============================================================
+
+-- Roles fijos (id estables)
+INSERT INTO `roles` (`id`, `name`, `scope`, `description`) VALUES
+(1, 'Administrador', 'Global', 'Administrador del Sistema'),
+(2, 'Dueño', 'Branch', 'Dueño de Sucursal'),
+(3, 'Empleado', 'Branch', 'Empleado Regular')
+ON DUPLICATE KEY UPDATE
+  `name`=VALUES(`name`),
+  `scope`=VALUES(`scope`),
+  `description`=VALUES(`description`);
+
+-- Admin (si ya existe por email, se actualiza password y datos)
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `is_active`, `status`, `createdAt`, `updatedAt`)
 VALUES
 (3, 'Mario Admin', 'admin@gmail.com',
- '$2b$10$7pXmFhLAn8BvH7Y/YpXoO.U7uI6X4S6M8R9Q0W1E2R3T4Y5U6I7O8',
- 1, 'active', NOW(), NOW());
+ '$2a$10$vI8NoizvNoL5Xh36E6H2G.A/fLw/8q6Gv6Vp.E6N/F7jLhNl.O6G6',
+ 1, 'active', NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+  `username`=VALUES(`username`),
+  `password`=VALUES(`password`),
+  `is_active`=VALUES(`is_active`),
+  `status`=VALUES(`status`),
+  `updatedAt`=NOW();
 
--- Darle el poder de Admin a Mario
-INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (3, 1);
+-- Asignar rol admin a user_id=3 sin duplicar ni romper FK
+INSERT INTO `user_roles` (`user_id`, `role_id`)
+SELECT 3, 1
+WHERE EXISTS (SELECT 1 FROM `users` WHERE `id`=3)
+  AND EXISTS (SELECT 1 FROM `roles` WHERE `id`=1)
+  AND NOT EXISTS (
+    SELECT 1 FROM `user_roles` WHERE `user_id`=3 AND `role_id`=1
+  );
 
-# ------------------------------------------------------------
-# RESTORE SETTINGS
-# ------------------------------------------------------------
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- (Opcional) Si también quieres intentar asignar admin a user_id=4 solo si existe:
+INSERT INTO `user_roles` (`user_id`, `role_id`)
+SELECT 4, 1
+WHERE EXISTS (SELECT 1 FROM `users` WHERE `id`=4)
+  AND EXISTS (SELECT 1 FROM `roles` WHERE `id`=1)
+  AND NOT EXISTS (
+    SELECT 1 FROM `user_roles` WHERE `user_id`=4 AND `role_id`=1
+  );

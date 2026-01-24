@@ -1,7 +1,7 @@
 export const ROLES = {
-    DEVELOPER: 'developer',
-    OWNER: 'owner',
-    EMPLOYEE: 'employee'
+    DEVELOPER: 'Administrador', // Backend sends 'Administrador' for Super Users
+    OWNER: 'Dueño',             // Backend sends 'Dueño'
+    EMPLOYEE: 'Empleado'        // Backend sends 'Empleado'
 };
 
 export const MENU_ITEMS = [

@@ -1,10 +1,9 @@
-const { User, SystemLog } = require('../models');
+const { User, SystemLog, UserRole, Role } = require('../models');
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const emailService = require('../services/emailService');
 
-// Función para REGISTRAR un nuevo usuario
-// Función para REGISTRAR un nuevo usuario
 // Función para REGISTRAR un nuevo usuario
 exports.register = async (req, res) => {
   try {
@@ -114,6 +113,28 @@ exports.register = async (req, res) => {
       permissions: {}
     });
 
+    // 4.b Vinculación Automática a UserRoles (Sync Legacy & New Tables)
+    try {
+      const roleRecord = await Role.findOne({ where: { name: assignedRole } });
+      if (roleRecord) {
+        // Determine branch_id if possible. 
+        // If it's an invite, potentially we could assume a branch, but for now NULL is safe until assignment.
+        // For 'Administrador' it is always NULL.
+        // For 'Dueño' logic is they create branch later.
+        await UserRole.create({
+          userId: newUser.id,
+          roleId: roleRecord.id, // mapped from name
+          branchId: null // Pending specific branch assignment
+        });
+        console.log(`✅ Rol sincronizado en user_roles para: ${newUser.id} - ${assignedRole}`);
+      } else {
+        console.warn(`⚠️ No se encontró el rol '${assignedRole}' en la tabla roles. Sincronización fallida.`);
+      }
+    } catch (roleErr) {
+      console.error("Error vinculando UserRole:", roleErr);
+      // We don't fail the request, just log it, as the legacy column 'role' is still set.
+    }
+
     // Enviar correo de bienvenida (async)
     try {
       emailService.sendWelcomeEmail(email, username, password);
@@ -163,63 +184,42 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Buscar al usuario por su email
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      // Log Security Event: Unknown User
-      await SystemLog.create({
-        level: 'warn',
-        section: 'Auth',
-        message: `Intento de login fallido: Usuario no encontrado (${email})`,
-        meta: { email, ip: req.ip }
-      });
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
+    // 2. BUSQUEDA MODIFICADA: Incluimos el modelo Role
+    const user = await User.findOne({
+      where: { email },
+      include: [{
+        model: Role,
+        as: 'roles', // Debe coincidir con el alias en models/index.js
+        through: { attributes: [] }
+      }]
+    });
 
-    // 2. Comparar la contraseña enviada con la encriptada en la BD
+    if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      // Log Security Event: Bad Password
-      await SystemLog.create({
-        level: 'warn',
-        section: 'Auth',
-        message: `Intento de login fallido: Contraseña incorrecta para ${email}`,
-        meta: { email, userId: user.id, ip: req.ip }
-      });
-      return res.status(401).json({ message: 'Contraseña incorrecta.' });
-    }
+    if (!isMatch) return res.status(401).json({ message: 'Contraseña incorrecta.' });
 
-    // 3. Crear Token (JWT)
-    // Standard payload
+    // 3. EXTRAER EL NOMBRE DEL ROL (Si no tiene, default a 'Empleado')
+    const roleName = (user.roles && user.roles.length > 0)
+      ? user.roles[0].name
+      : 'Empleado';
+
+    // 4. GENERAR TOKEN CON EL ROL REAL
     const payload = {
       id: user.id,
       username: user.username,
-      role: user.role,
+      role: roleName, // <-- Aquí enviamos el string 'Administrador'
       ownerId: user.ownerId,
-      status: user.status,
       permissions: user.permissions || {}
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
 
-    // 4. Preparar respuesta de usuario estandarizada
-    const userResponse = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      ownerId: user.ownerId,
-      status: user.status,
-      permissions: user.permissions || {}
-    };
-
     res.status(200).json({
       message: "Inicio de sesión exitoso",
-      user: userResponse,
+      user: { ...payload, email: user.email },
       token: token
     });
-
-    console.log(`🔑 [AUTH] Usuario: ${user.username} | Rol: ${user.role} | OwnerID: ${user.ownerId}`);
 
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor', error: error.message });
