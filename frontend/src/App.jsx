@@ -23,6 +23,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const DevDashboard = lazy(() => import('./pages/DevDashboard'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const AiInbox = lazy(() => import('./pages/AiInbox'));
+const SessionConsole = lazy(() => import('./pages/SessionConsole'));
 const Folios = lazy(() => import('./pages/Folios'));
 const NewFolio = lazy(() => import('./pages/NewFolio'));
 const KanbanBoard = lazy(() => import('./components/KanbanBoard'));
@@ -78,6 +79,7 @@ const AnimatedRoutes = () => {
             <Route path="/folio/nuevo" element={<PageTransition><NewFolio /></PageTransition>} />
             <Route path="/produccion" element={<PageTransition><KanbanBoard /></PageTransition>} />
             <Route path="/asistente-ia" element={<AiInbox />} />
+            <Route path="/ia-sesiones/:id" element={<SessionConsole />} />
             {/* Fallback for employee dashboard access if needed */}
           </Route>
 

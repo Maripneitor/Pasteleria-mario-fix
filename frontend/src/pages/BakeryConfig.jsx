@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash, Edit2, Save, X } from 'lucide-react';
+import api from '../api/axios';
 
 // Mock data for initial state (in a real app, this would come from an API)
 const INITIAL_FLAVORS = [
@@ -17,8 +18,32 @@ const INITIAL_FILLINGS = [
 ];
 
 const BakeryConfig = () => {
-    const [flavors, setFlavors] = useState(INITIAL_FLAVORS);
-    const [fillings, setFillings] = useState(INITIAL_FILLINGS);
+    const [flavors, setFlavors] = useState([]);
+    const [fillings, setFillings] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchConfig = async () => {
+        try {
+            const [flavRes, fillRes] = await Promise.all([
+                api.get('/ingredients/flavors'),
+                api.get('/ingredients/fillings')
+            ]);
+            setFlavors(flavRes.data);
+            setFillings(fillRes.data);
+        } catch (error) {
+            console.error("Error loading config", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchConfig();
+    }, []);
+
+    const handleUpdate = () => fetchConfig();
+
+    if (loading) return <div className="p-10 text-center">Cargando configuración...</div>;
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-8">
@@ -29,7 +54,8 @@ const BakeryConfig = () => {
                 <ConfigSection
                     title="Sabores de Pan"
                     items={flavors}
-                    setItems={setFlavors}
+                    onUpdate={handleUpdate}
+                    endpoint="/ingredients/flavors"
                     color="blue"
                 />
 
@@ -37,7 +63,8 @@ const BakeryConfig = () => {
                 <ConfigSection
                     title="Rellenos"
                     items={fillings}
-                    setItems={setFillings}
+                    onUpdate={handleUpdate}
+                    endpoint="/ingredients/fillings"
                     color="purple"
                 />
             </div>
@@ -45,25 +72,30 @@ const BakeryConfig = () => {
     );
 };
 
-const ConfigSection = ({ title, items, setItems, color }) => {
+const ConfigSection = ({ title, items, onUpdate, endpoint, color }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newItemName, setNewItemName] = useState('');
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!newItemName.trim()) return;
-        const newItem = {
-            id: Date.now(),
-            name: newItemName,
-            available: true
-        };
-        setItems([...items, newItem]);
-        setNewItemName('');
-        setIsAdding(false);
+        try {
+            await api.post(endpoint, { name: newItemName, available: true });
+            setNewItemName('');
+            setIsAdding(false);
+            onUpdate();
+        } catch (error) {
+            alert('Error al agregar: ' + error.message);
+        }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('¿Estás seguro de eliminar este ítem?')) {
-            setItems(items.filter(i => i.id !== id));
+            try {
+                await api.delete(`${endpoint}/${id}`);
+                onUpdate();
+            } catch (error) {
+                alert('Error al eliminar');
+            }
         }
     };
 

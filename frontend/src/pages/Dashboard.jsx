@@ -6,7 +6,7 @@ import FlavorChart from '../components/dashboard/FlavorChart';
 import ActionableTable from '../components/dashboard/ActionableTable';
 import { mockOrders } from '../utils/constants'; // Keep using mock data as base if API fails
 import { calculateKPIData, groupOrdersByDate, calculateFlavorStats } from '../utils/analyticsHelpers';
-// import api from '../services/api';
+import api from '../api/axios';
 
 const Dashboard = () => {
     const { user, currentBranch } = useAuth();
@@ -15,7 +15,7 @@ const Dashboard = () => {
     const [salesData, setSalesData] = useState([]);
     const [flavorData, setFlavorData] = useState([]);
     const [recentOrders, setRecentOrders] = useState([]);
-    // const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
 
     const handleWhatsApp = (item) => {
         const phone = item.client?.phone || item.clientPhone; // Support both structures
@@ -36,66 +36,40 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Ideally fetch full list or robust summary. 
-                // For demo of "Real Data Helpers", let's assume we get a list of orders 
-                // or use mockOrders if API response is limited.
+                setLoading(true);
+                const response = await api.get('/dashboard/daily-summary');
+                const data = response.data;
 
-                // const response = await api.get('/folios'); // fetching full list for analytics
-                // const orders = response.data;
+                if (data.stats) {
+                    setStats(data.stats);
+                }
 
-                // FALLBACK: Use Mock Orders to demonstrate the Helpers logic clearly without breaking if API is empty
-                const orders = mockOrders;
+                if (data.recentOrders) {
+                    // Map to ensure status colors
+                    const mappedOrders = data.recentOrders.map(order => ({
+                        ...order,
+                        statusColor: order.status === 'Entregado' ? 'green' :
+                            order.status === 'Pendiente' ? 'yellow' : 'gray'
+                    }));
+                    setRecentOrders(mappedOrders);
 
-                // Process Data using Helpers
-                const kpis = calculateKPIData(orders);
-                const salesTrend = groupOrdersByDate(orders);
-                const flavorDist = calculateFlavorStats(orders);
-
-                // Map KPIs to HeroCard format
-                const newStats = [
-                    {
-                        title: 'Ingresos Totales',
-                        value: `$${kpis.revenue.toLocaleString()}`,
-                        icon: 'DollarSign',
-                        trend: 'up',
-                        trendValue: '+2%', // Mock trend for now
-                        data: salesTrend.map(d => d.sales)
-                    },
-                    {
-                        title: 'Pedidos Activos',
-                        value: kpis.activeCount,
-                        icon: 'ShoppingBag',
-                        trend: 'up',
-                        trendValue: '+5',
-                        data: [5, 8, 12, 15, 20, 18, kpis.activeCount]
-                    },
-                    {
-                        title: 'Entregados',
-                        value: kpis.completedCount,
-                        icon: 'CheckCircle',
-                        trend: 'neutral',
-                        trendValue: '0%',
-                        data: [10, 12, 15, 12, 18, 20, kpis.completedCount]
-                    },
-                    {
-                        title: 'Pendientes',
-                        value: kpis.pendingCount,
-                        icon: 'Clock',
-                        trend: 'down',
-                        trendValue: '-1',
-                        data: [8, 6, 5, 8, 4, 3, kpis.pendingCount]
-                    }
-                ];
-
-                setStats(newStats);
-                setSalesData(salesTrend);
-                setFlavorData(flavorDist);
-                setRecentOrders(orders.slice(0, 5).map(o => ({ ...o, folioNumber: o.id || '009' })));
-
+                    // Sales/Flavor data could also come from API
+                    if (data.salesTrend) setSalesData(data.salesTrend);
+                    if (data.flavorStats) setFlavorData(data.flavorStats);
+                }
             } catch (error) {
                 console.error("Error fetching dashboard data", error);
+                // Fallback to mock if API fails during dev/demo
+                const orders = mockOrders;
+                const kpis = calculateKPIData(orders);
+                setStats([
+                    { title: 'Ingresos Totales', value: `$${kpis.revenue}`, icon: 'DollarSign', trend: 'up', trendValue: '+2%', data: [] },
+                    { title: 'Pedidos Activos', value: kpis.activeCount, icon: 'ShoppingBag', trend: 'up', trendValue: '+5', data: [] },
+                    { title: 'Entregados', value: kpis.completedCount, icon: 'CheckCircle', trend: 'neutral', trendValue: '0%', data: [] },
+                    { title: 'Pendientes', value: kpis.pendingCount, icon: 'Clock', trend: 'down', trendValue: '-1', data: [] }
+                ]);
             } finally {
-                // setLoading(false);
+                setLoading(false);
             }
         };
 
@@ -116,8 +90,23 @@ const Dashboard = () => {
                 </p>
             </div>
 
-            {/* Stats Grid Wrapper - Step A */}
-            <StatsGrid stats={stats} />
+            {/* StatsGrid with Skeleton Loading */}
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                                <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                            </div>
+                            <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <StatsGrid stats={stats} />
+            )}
 
             {/* Charts Grid - Step B */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

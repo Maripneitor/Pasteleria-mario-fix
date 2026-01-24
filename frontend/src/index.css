@@ -41,3 +41,16 @@ h6 {
 html.dark ::-webkit-scrollbar-thumb {
   @apply bg-slate-700 hover:bg-slate-600;
 }
+
+/* Dark Mode Table Overrides - Task 3 */
+.dark tr { 
+  background-color: #1f2937; /* Gray-800 */
+  color: #f9fafb; 
+}
+.dark tr:hover { 
+  background-color: #374151; /* Gray-700 */
+}
+.dark thead {
+  background-color: #b91c1c; /* Red-700 for branding match */
+  color: white;
+}

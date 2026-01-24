@@ -45,7 +45,7 @@ const CashCloseTicket = ({ isOpen, onClose }) => {
 -------------------------
 *💰 INGRESO REAL (Anticipos):* $${summary.realIncome.toFixed(2)}
 
-_Pastelería Mario - Sistema_
+_Pastelería La Fiesta - Sistema_
 `.trim();
 
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;

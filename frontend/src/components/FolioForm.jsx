@@ -8,7 +8,7 @@ import AiSidebar from './AiSidebar';
 import ImageAnalyzer from './ImageAnalyzer';
 import VisualCakeBuilder from './VisualCakeBuilder';
 import ProductionLabelPreview from './ProductionLabelPreview';
-import api from '../services/api';
+import api from '../api/axios';
 
 // --- Constants & Helpers ---
 const BLOCKED_FLAVORS = ['Mil Hojas', 'Pastel de Queso'];
@@ -126,27 +126,70 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
         setValue('designDescription', (currentDesc ? currentDesc + '\n\n' : '') + analysisText);
     };
 
+    // --- File Handling ---
+    const [selectedImages, setSelectedImages] = useState([]);
+    const [previewUrls, setPreviewUrls] = useState([]);
+
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length + selectedImages.length > 5) {
+            alert('Máximo 5 imágenes permitidas');
+            return;
+        }
+        setSelectedImages(prev => [...prev, ...files]);
+
+        const newPreviews = files.map(file => URL.createObjectURL(file));
+        setPreviewUrls(prev => [...prev, ...newPreviews]);
+    };
+
+    const removeImage = (index) => {
+        setSelectedImages(prev => prev.filter((_, i) => i !== index));
+        setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    };
+
     // --- Form Submission ---
     const onSubmit = async (data) => {
         try {
-            const payload = {
-                ...data,
-                // Ensure number types
-                persons: parseInt(data.persons),
-                total: parseFloat(data.total),
-                deliveryCost: parseFloat(data.deliveryCost),
-                advancePayment: parseFloat(data.advancePayment),
-                isPaid: parseFloat(data.advancePayment) >= calculations.total,
-                // Map filling to objects if backend expects {name, hasCost}
-                filling: data.filling.map(f => ({ name: f, hasCost: false })), // Simplified for now
-                // Tiers mapping if active
-                tiers: folioType === 'Base/Especial' ? data.tiers : [],
-            };
+            const formData = new FormData();
 
-            await api.post('/folios', payload);
+            // Append simple fields
+            formData.append('clientName', data.clientName);
+            formData.append('clientPhone', data.clientPhone);
+            formData.append('deliveryDate', data.deliveryDate);
+            formData.append('deliveryTime', data.deliveryTime);
+            formData.append('folioType', data.folioType);
+            formData.append('persons', data.persons);
+            formData.append('shape', data.shape);
+            formData.append('designDescription', data.designDescription);
+            formData.append('total', data.total);
+            formData.append('deliveryCost', data.deliveryCost);
+            formData.append('advancePayment', data.advancePayment);
+            formData.append('isPaid', parseFloat(data.advancePayment) >= calculations.total);
+            formData.append('addCommissionToCustomer', data.addCommissionToCustomer);
+
+            // Append complex objects as JSON strings
+            formData.append('cakeFlavor', JSON.stringify(data.cakeFlavor)); // Assuming array
+            // Map fillings to objects expected by backend
+            const fillingObjects = data.filling.map(f => ({ name: f, hasCost: false }));
+            formData.append('filling', JSON.stringify(fillingObjects));
+            formData.append('tiers', JSON.stringify(folioType === 'Base/Especial' ? data.tiers : []));
+            formData.append('additional', JSON.stringify(data.additional));
+
+            // Append Files
+            selectedImages.forEach((file) => {
+                formData.append('referenceImages', file);
+            });
+
+            // Admin Override
+            if (data.branchId) formData.append('branchId', data.branchId);
+
+            await api.post('/folios', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
             if (onSuccess) onSuccess();
         } catch (error) {
-            alert('Error al guardar: ' + error.message);
+            alert('Error al guardar: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -410,6 +453,31 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
                                         className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-lg p-3 h-48 focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-colors"
                                         placeholder="Detalles específicos del decorado..."
                                     />
+                                    {/* Image Upload UI */}
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Imágenes de Referencia</label>
+                                        <div className="flex flex-wrap gap-3">
+                                            {previewUrls.map((url, idx) => (
+                                                <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                                                    <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                                                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl shadow">
+                                                        <Trash size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {previewUrls.length < 5 && (
+                                                <div className="w-full sm:w-auto">
+                                                    <label className="w-20 h-20 md:w-32 md:h-32 flex flex-col items-center justify-center border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl cursor-pointer bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all group">
+                                                        <div className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                                                            <Plus size={20} className="text-blue-500" />
+                                                        </div>
+                                                        <span className="text-[10px] mt-2 font-medium text-blue-600 dark:text-blue-400">Subir Imagen</span>
+                                                        <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">

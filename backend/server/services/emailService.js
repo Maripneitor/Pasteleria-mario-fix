@@ -49,6 +49,32 @@ exports.sendWelcomeEmail = async (email, username, password) => {
         console.log("Welcome email sent: %s", info.messageId);
     } catch (error) {
         console.error("Error sending welcome email:", error);
-        // Do not throw, finding email shouldn't block registration
+    }
+};
+
+exports.sendEmailWithAttachment = async (to, subject, text, attachmentBuffer, filename) => {
+    try {
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            console.warn("Email credentials not found. Skipping email.");
+            return;
+        }
+
+        const mailOptions = {
+            from: `"Pastelería La Fiesta" <${process.env.EMAIL_USER}>`,
+            to: to,
+            subject: subject,
+            text: text,
+            attachments: [
+                {
+                    filename: filename,
+                    content: attachmentBuffer
+                }
+            ]
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Report email sent: %s", info.messageId);
+    } catch (error) {
+        console.error("Error sending report email:", error);
     }
 };

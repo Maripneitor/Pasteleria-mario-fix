@@ -1,15 +1,46 @@
-import React from 'react';
-import AiInboxComponent from '../components/orders/AiInbox';
-import folioService from '../services/folioService';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, MessageCircle, ArrowRight, Trash2, RefreshCw } from 'lucide-react';
+import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../context/ToastSystem';
 
 const AiInbox = () => {
     const navigate = useNavigate();
+    const { showError, showSuccess } = useToast();
+    const [sessions, setSessions] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleOrderCreated = async (extractedData) => {
-        // Here we could directly create the order or navigate to NewFolio with pre-filled data.
-        // For standard UX, let's navigate to NewFolio with state.
-        navigate('/folio/nuevo', { state: { prefilledData: extractedData } });
+    const fetchSessions = async () => {
+        try {
+            const res = await api.get('/ai-sessions');
+            setSessions(res.data);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching sessions", error);
+            // showError("Error al conectar con el asistente"); 
+            setLoading(false);
+        }
+    };
+
+    // Polling every 30s
+    useEffect(() => {
+        fetchSessions();
+        const interval = setInterval(fetchSessions, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleDiscard = async (id, e) => {
+        e.stopPropagation();
+        if (window.confirm("¿Descartar esta conversación?")) {
+            try {
+                await api.delete(`/ai-sessions/${id}`);
+                setSessions(prev => prev.filter(s => s.id !== id));
+                showSuccess("Conversación descartada");
+            } catch (error) {
+                showError("No se pudo descartar la sesión");
+            }
+        }
     };
 
     return (

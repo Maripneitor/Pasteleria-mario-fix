@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react';
-import api from '../services/api';
+import api from '../api/axios';
 
 const PDFModalViewer = ({ isOpen, onClose, folio, onPrev, onNext, hasPrev, hasNext }) => {
     const [pdfUrl, setPdfUrl] = useState(null);

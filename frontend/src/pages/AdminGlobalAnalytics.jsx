@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Activity, TrendingUp, AlertTriangle, Users } from 'lucide-react';
-import api from '../services/api';
+import api from '../api/axios';
 
 const AdminGlobalAnalytics = () => {
     // Mock Data for now as we build the UI

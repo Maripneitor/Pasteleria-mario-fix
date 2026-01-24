@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../api/axios';
 import AnimatedInput from '../components/ui/AnimatedInput';
 import BakeryButton from '../components/ui/BakeryButton';
 import { User, Phone, Search, Plus, Loader2 } from 'lucide-react';

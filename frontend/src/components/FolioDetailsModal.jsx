@@ -6,7 +6,7 @@ import Lightbox from 'yet-another-react-lightbox';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import 'yet-another-react-lightbox/styles.css';
 import SignaturePadModal from './SignaturePadModal';
-import api from '../services/api';
+import api from '../api/axios';
 
 const FolioDetailsModal = ({ folio, isOpen, onClose, onUpdate }) => {
     const [index, setIndex] = useState(-1);

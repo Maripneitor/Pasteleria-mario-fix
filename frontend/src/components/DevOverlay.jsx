@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSystemLog } from '../context/SystemLogContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Activity, AlertCircle, X, Server } from 'lucide-react';
-import api from '../services/api';
+import api from '../api/axios';
 
 const DevOverlay = () => {
     const { user, debugLogin } = useAuth();

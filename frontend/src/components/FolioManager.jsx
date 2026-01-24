@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import api from '../api/axios';
 import PDFViewer from './PDFViewer';
 import FolioForm from './FolioForm'; // New Component
 import { FileText, Plus, Search, Calendar, User, ArrowLeft } from 'lucide-react';

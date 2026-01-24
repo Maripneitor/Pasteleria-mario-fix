@@ -72,7 +72,7 @@ const AppNavigation = () => {
         <>
             {/* --- MOBILE TOP BAR --- */}
             <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-burnt-wood border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 z-50">
-                <span className="font-serif font-bold text-xl text-bakery-chocolate dark:text-gray-200">Pastelería Mario</span>
+                <span className="font-serif font-bold text-xl text-bakery-chocolate dark:text-gray-200">Pastelería La Fiesta</span>
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className="p-2 text-bakery-chocolate dark:text-gray-200"
@@ -128,7 +128,7 @@ const AppNavigation = () => {
             <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-white dark:bg-burnt-wood border-r border-gray-200 dark:border-r-gray-800 z-30 transition-colors duration-300">
                 <div className="p-6">
                     <h1 className="font-serif font-bold text-2xl text-bakery-chocolate dark:text-bakery-cream text-center mb-6">
-                        Pastelería <span className="text-bakery-accent text-3xl block">Mario</span>
+                        Pastelería <span className="text-bakery-accent text-3xl block">La Fiesta</span>
                     </h1>
                     {roleBadge}
                 </div>

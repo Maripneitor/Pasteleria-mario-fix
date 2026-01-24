@@ -79,7 +79,8 @@ app.use('/api/ingredients', ingredientRoutes);
 
 // --- INICIO DEL SERVIDOR SEGURO ---
 // Eliminamos alter:true y migraciones manuales del código de arranque
-sequelize.authenticate().then(async () => {
+// Sincronización de base de datos activada por petición del usuario
+sequelize.sync().then(async () => {
   console.log('✅ Conexión a base de datos establecida. Sistema RBAC activo.');
 
   await createDevUser();

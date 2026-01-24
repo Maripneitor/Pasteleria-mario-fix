@@ -38,6 +38,13 @@ const DashboardLayout = ({ children }) => {
     const { toggleTheme, isDark } = useTheme();
     const location = useLocation();
 
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    React.useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     // If children are provided, use them. Otherwise, use Outlet.
     const content = children || <Outlet />;
 
@@ -56,10 +63,16 @@ const DashboardLayout = ({ children }) => {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200">
             {/* Sidebar */}
             <motion.aside
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1, width: sidebarOpen ? 256 : 80 }}
-                transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
-                className="bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 fixed h-full z-30 hidden md:flex flex-col"
+                initial={false}
+                animate={{
+                    x: sidebarOpen ? 0 : (window.innerWidth < 768 ? -300 : 0),
+                    width: sidebarOpen ? 256 : (window.innerWidth < 768 ? 256 : 80)
+                }}
+                className={`
+                    fixed h-full z-50 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
+                    transition-transform duration-300 ease-in-out
+                    ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+                `}
             >
                 <div className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-gray-700 overflow-hidden">
                     <AnimatePresence mode="wait">
@@ -69,9 +82,9 @@ const DashboardLayout = ({ children }) => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent whitespace-nowrap"
+                                className="text-xl font-bold text-red-600 whitespace-nowrap"
                             >
-                                Pastelería Mario
+                                Pastelería La Fiesta
                             </motion.span>
                         ) : (
                             <motion.span
@@ -79,9 +92,9 @@ const DashboardLayout = ({ children }) => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="text-xl font-bold text-indigo-600"
+                                className="text-xl font-bold text-red-600"
                             >
-                                PM
+                                PLF
                             </motion.span>
                         )}
                     </AnimatePresence>
@@ -141,24 +154,37 @@ const DashboardLayout = ({ children }) => {
                 </div>
             </motion.aside>
 
+
             {/* Main Content */}
             <motion.div
                 className="flex-1 flex flex-col min-h-screen"
-                animate={{ marginLeft: sidebarOpen ? 256 : 80 }}
-                transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
+                animate={{ marginLeft: sidebarOpen && window.innerWidth >= 768 ? 256 : (window.innerWidth >= 768 ? 80 : 0) }}
             >
                 {/* Navbar */}
                 <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 flex items-center justify-between px-6">
                     <div className="flex items-center gap-4">
-                        <button className="md:hidden p-2 text-gray-500">
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                        >
                             <Menu className="w-6 h-6" />
                         </button>
-                        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                            {filteredNavigation.find(i => i.path === location.pathname)?.label || 'Panel de Control'}
-                        </h2>
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-800 dark:text-white hidden sm:block">
+                                {filteredNavigation.find(i => i.path === location.pathname)?.label || 'Panel de Control'}
+                            </h2>
+                            {/* Mobile Title */}
+                            <span className="text-lg font-bold text-red-500 sm:hidden">
+                                Pastelería La Fiesta
+                            </span>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
+                        {/* Clock */}
+                        <div className="hidden md:block bg-gray-900 p-2 rounded text-white font-mono">
+                            {currentTime.toLocaleTimeString()}
+                        </div>
                         <button
                             onClick={toggleTheme}
                             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"

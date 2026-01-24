@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../api/axios';
 import { User, Shield, Briefcase, Mail, Loader2, Trash2 } from 'lucide-react';
 import BakeryButton from '../components/ui/BakeryButton';
 

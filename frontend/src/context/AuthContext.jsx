@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import api from '../services/api';
+import api from '../api/axios';
 import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext(null);
@@ -121,8 +121,11 @@ export const AuthProvider = ({ children }) => {
             // Determinar rama inicial
             const initialBranch = defaultBranch || validBranches[0];
             if (initialBranch) {
-                localStorage.setItem('branch_id', initialBranch.id);
+                localStorage.setItem('branchId', initialBranch.id); // CamelCase para coincidir con la solicitud
+                localStorage.setItem('branch_id', initialBranch.id); // Legacy
                 localStorage.setItem('current_branch_id', initialBranch.id);
+                localStorage.setItem('userRole', user.role || 'user');
+                localStorage.setItem('username', user.username || 'Usuario');
                 setCurrentBranch(initialBranch);
             }
 

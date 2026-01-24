@@ -3,7 +3,7 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 
 // --- CONFIGURACIÓN ---
-const WEBHOOK_URL = 'https://pasteleria-la-fiesta.up.railway.app/api/webhooks/whatsapp';
+const WEBHOOK_URL = 'http://localhost:3000/api/webhooks/whatsapp';
 const TRIGGER_COMMAND = 'generar folio'; // Comando simplificado
 
 console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');

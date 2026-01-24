@@ -90,7 +90,7 @@ const CashClosing = () => {
             </div>
 
             {/* Decorations */}
-            <div className="absolute top-2 right-2 opacity-20 text-xs">Pastelería Mario</div>
+            <div className="absolute top-2 right-2 opacity-20 text-xs">Pastelería La Fiesta</div>
         </div>
     );
 };

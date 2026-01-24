@@ -4,16 +4,26 @@ import { Calendar, User, Phone, Cake } from 'lucide-react';
 
 const FolioCard = ({ folio }) => {
     // Helper for status colors
+    // Helper for status colors
     const getStatusStyle = (status) => {
         switch (status) {
             case 'Nuevo': return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'En Producción': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Pendiente': return 'bg-yellow-100 text-yellow-800 border-yellow-200'; // Solicitado explícitamente
+            case 'En Producción': return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'Listo para Entrega': return 'bg-bakery-success text-green-900 border-green-200';
             case 'Entregado': return 'bg-gray-100 text-gray-800 border-gray-200';
-            case 'Cancelado': return 'bg-bakery-error text-red-900 border-red-200';
+            case 'Cancelado': return 'bg-bakery-error/20 text-red-900 border-red-200 opacity-70'; // Opacidad reducida
             default: return 'bg-gray-50 text-gray-600 border-gray-200';
         }
     };
+
+    // Urgency Check
+    const isToday = () => {
+        if (!folio.deliveryDate) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return folio.deliveryDate.startsWith(today); // Simple string match YYYY-MM-DD
+    };
+
 
     // Safe accessors
     const flavor = Array.isArray(folio.cakeFlavor) ? folio.cakeFlavor[0] : (folio.cakeFlavor || 'Sin Sabor');
@@ -37,7 +47,7 @@ const FolioCard = ({ folio }) => {
             exit={{ opacity: 0, scale: 0.95 }}
             whileHover={{ rotate: 1, scale: 1.02, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.15)" }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group h-full flex flex-col"
+            className={`bg-white rounded-xl shadow-sm border overflow-hidden relative group h-full flex flex-col ${isToday() ? 'border-bakery-primary ring-2 ring-bakery-primary/20 bg-bakery-primary/5' : 'border-gray-100'}`}
         >
             <div className="p-5 flex flex-col h-full">
                 {/* Header */}

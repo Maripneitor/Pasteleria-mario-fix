@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '../services/api';
+import api from '../api/axios';
 import { Plus, LayoutGrid, List, X } from 'lucide-react';
 import FolioCardSkeleton from '../components/FolioCardSkeleton';
 import SwipeableFolioCard from '../components/SwipeableFolioCard';
@@ -10,8 +10,12 @@ import FolioDetailsModal from '../components/FolioDetailsModal';
 import EmptyState from '../components/EmptyState';
 import { sanitizeFolioList } from '../utils/folioSanitizer';
 import FolioTable from '../components/dashboard/FolioTable';
+import { useToast } from '../context/ToastSystem';
+import FolioForm from '../components/FolioForm';
 
 const Folios = () => {
+    const { showSuccess, showError } = useToast();
+
     const [folios, setFolios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -41,7 +45,20 @@ const Folios = () => {
     const fetchFolios = async () => {
         try {
             const response = await api.get('/folios');
-            setFolios(sanitizeFolioList(response.data));
+            const data = sanitizeFolioList(response.data);
+
+            // Filter/Sort logic: Prioritize urgent orders (deliveryDate = today)
+            const today = new Date().toISOString().split('T')[0];
+            const sortedData = data.sort((a, b) => {
+                const dateA = a.deliveryDate ? a.deliveryDate.split('T')[0] : '';
+                const dateB = b.deliveryDate ? b.deliveryDate.split('T')[0] : '';
+
+                if (dateA === today && dateB !== today) return -1;
+                if (dateA !== today && dateB === today) return 1;
+                return 0; // Keep original order otherwise
+            });
+
+            setFolios(sortedData);
             setLoading(false);
         } catch (err) {
             setError('Error al cargar los folios.');
@@ -81,8 +98,9 @@ const Folios = () => {
                 shape: 'Redondo', designDescription: 'Pedido estándar'
             });
             fetchFolios();
+            showSuccess(`Folio para ${payload.clientName} creado correctamente.`);
         } catch (err) {
-            alert('Error al crear el folio: ' + (err.response?.data?.message || err.message));
+            showError('Error al crear el folio: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -110,9 +128,9 @@ const Folios = () => {
                 signature: signatureDataUrl
             });
             setSigningFolio(null);
-            fetchFolios();
+            showSuccess('Firma guardada correctamente.');
         } catch (err) {
-            alert("Error al guardar la firma: " + err.message);
+            showError("Error al guardar la firma: " + err.message);
         }
     };
 
@@ -137,6 +155,7 @@ const Folios = () => {
 
                 <div className="flex items-center gap-4">
                     <div className="flex bg-white dark:bg-bakery-800 rounded-lg p-1 border border-gray-200 dark:border-bakery-700 mr-2">
+                        {/* ... layout toggles ... */}
                         <button
                             onClick={() => setViewMode('grid')}
                             className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-bakery-100 dark:bg-bakery-700 text-bakery-primary' : 'text-gray-400 dark:text-gray-500 hover:text-bakery-primary'}`}
@@ -148,6 +167,33 @@ const Folios = () => {
                             className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-bakery-100 dark:bg-bakery-700 text-bakery-primary' : 'text-gray-400 dark:text-gray-500 hover:text-bakery-primary'}`}
                         >
                             <List size={20} />
+                        </button>
+                    </div>
+
+                    <div className="hidden md:flex gap-2 mr-2">
+                        <button onClick={() => {
+                            // CSV Export logic
+                            const headers = ['Folio', 'Cliente', 'Teléfono', 'Fecha', 'Sabor', 'Total', 'Estado'];
+                            const rows = folios.map(f => [
+                                f.folioNumber,
+                                f.clientName,
+                                f.clientPhone,
+                                f.deliveryDate,
+                                Array.isArray(f.cakeFlavor) ? f.cakeFlavor[0] : f.cakeFlavor,
+                                f.total,
+                                f.status
+                            ]);
+                            const csvContent = "data:text/csv;charset=utf-8,"
+                                + headers.join(",") + "\n"
+                                + rows.map(e => e.join(",")).join("\n");
+                            const encodedUri = encodeURI(csvContent);
+                            const link = document.createElement("a");
+                            link.setAttribute("href", encodedUri);
+                            link.setAttribute("download", "pedidos.csv");
+                            document.body.appendChild(link);
+                            link.click();
+                        }} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg border border-gray-200">
+                            Exp. Excel
                         </button>
                     </div>
 
@@ -211,7 +257,16 @@ const Folios = () => {
                     <FolioTable
                         folios={folios}
                         onEdit={(folio) => setSelectedFolio(folio)}
-                        onPrint={(folio) => alert(`Imprimiendo ticket para folio ${folio.folioNumber}`)}
+                        onPrint={(folio) => {
+                            // PDF Export Logic
+                            const token = localStorage.getItem('token');
+                            // Ensure backend URL is correct. Assuming relative path via proxy or full URL.
+                            // Since api instance has baseURL, we need to construct it carefully or use absolute if known.
+                            // If VITE_API_URL is set, use it.
+                            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                            const id = folio.id || folio._id || folio.folioNumber;
+                            window.open(`${baseUrl}/folios/${id}/pdf?token=${token}`, '_blank');
+                        }}
                         onWhatsApp={(folio) => {
                             const message = `Hola ${folio.clientName}, su pedido #${folio.folioNumber} está listo.`;
                             window.open(`https://wa.me/${folio.clientPhone}?text=${encodeURIComponent(message)}`, '_blank');
@@ -224,32 +279,16 @@ const Folios = () => {
             <AnimatePresence>
                 {showCreateModal && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
-                        <motion.div
-                            initial={{ opacity: 0, y: 100, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 100, scale: 0.95 }}
-                            className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-2xl h-[92vh] md:h-auto md:max-h-[90vh] overflow-y-auto"
-                        >
-                            <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
-                                <h2 className="text-2xl font-serif font-bold text-bakery-text">Nuevo Pedido</h2>
-                                <button onClick={() => setShowCreateModal(false)} className="bg-gray-100 p-2 rounded-full"><X size={20} /></button>
-                            </div>
-                            <form onSubmit={handleSubmit} className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <input type="text" name="clientName" placeholder="Cliente" value={formData.clientName} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="tel" name="clientPhone" placeholder="Teléfono" value={formData.clientPhone} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="date" name="deliveryDate" value={formData.deliveryDate} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="time" name="deliveryTime" value={formData.deliveryTime} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="text" name="cakeFlavor" placeholder="Sabor" value={formData.cakeFlavor} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="text" name="filling" placeholder="Relleno" value={formData.filling} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="number" name="persons" placeholder="Personas" value={formData.persons} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="number" name="total" placeholder="Total" value={formData.total} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <input type="number" name="advancePayment" placeholder="Anticipo" value={formData.advancePayment} onChange={handleInputChange} className="input-field border p-3 rounded-lg" required />
-                                <div className="md:col-span-2 pt-4 flex justify-end gap-3">
-                                    <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-gray-600">Cancelar</button>
-                                    <button type="submit" className="px-6 py-2 bg-bakery-primary text-white rounded-lg">Guardar</button>
-                                </div>
-                            </form>
-                        </motion.div>
+                        <div className="w-full md:max-w-6xl h-[95vh] md:h-[90vh] bg-white dark:bg-bakery-950 rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden relative">
+                            <FolioForm
+                                onCancel={() => setShowCreateModal(false)}
+                                onSuccess={() => {
+                                    setShowCreateModal(false);
+                                    fetchFolios();
+                                    showSuccess('Pedido creado exitosamente.');
+                                }}
+                            />
+                        </div>
                     </div>
                 )}
             </AnimatePresence>

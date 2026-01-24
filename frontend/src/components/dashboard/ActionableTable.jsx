@@ -69,14 +69,14 @@ const ActionableTable = ({ data, onEdit, onPrint, onWhatsApp, onViewDetails }) =
 
                                 <td className="px-6 py-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5
-                                        ${item.status === 'Entregado' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                            item.status === 'Pendiente' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                        ${item.status === 'Entregado' || item.status === 'Listo para Entrega' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                            item.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                                                 item.status === 'Cancelado' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                                     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                         }`}
                                     >
-                                        <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Entregado' ? 'bg-green-500' :
-                                            item.status === 'Pendiente' ? 'bg-amber-500' :
+                                        <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Entregado' || item.status === 'Listo para Entrega' ? 'bg-green-500' :
+                                            item.status === 'Pendiente' ? 'bg-yellow-500' :
                                                 item.status === 'Cancelado' ? 'bg-red-500' : 'bg-blue-500'
                                             }`}></span>
                                         {item.status}

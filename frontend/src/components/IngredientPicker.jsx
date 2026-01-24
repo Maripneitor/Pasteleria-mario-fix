@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Plus } from 'lucide-react';
-import api from '../services/api';
+import api from '../api/axios';
 
 const IngredientPicker = ({
     type = 'flavor', // 'flavor' or 'filling'

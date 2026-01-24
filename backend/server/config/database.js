@@ -1,7 +1,6 @@
 const { Sequelize } = require('sequelize');
+require('dotenv').config();
 
-// La configuración de la base de datos ahora se lee de las variables de entorno
-// definidas en el archivo .env para mayor seguridad y flexibilidad.
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -10,25 +9,17 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT || 3306,
     dialect: 'mysql',
-    logging: false, // Se mantiene desactivado para no llenar la consola con logs de SQL.
-    dialectOptions: {
-      charset: 'utf8mb4',
-    }
+    logging: false, // Evita saturar la consola con logs de SQL
+    dialectOptions: { charset: 'utf8mb4' }
   }
 );
 
 const conectarDB = async () => {
   try {
-    // Validar variables de entorno críticas
-    if (!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
-      throw new Error('Faltan variables de entorno para la base de datos (DB_USER, DB_PASSWORD, DB_NAME)');
-    }
-
-    // Verifica que la conexión con la base de datos se ha establecido correctamente.
     await sequelize.authenticate();
-    console.log(`✅ Conexión a la base de datos establecida (MySQL en ${process.env.DB_HOST}/${process.env.DB_NAME})`);
+    console.log('✅ Conexión a la base de datos establecida.');
   } catch (error) {
-    console.error('❌ No se pudo conectar a la base de datos:', error);
+    console.error('❌ Error de conexión:', error);
   }
 };
 

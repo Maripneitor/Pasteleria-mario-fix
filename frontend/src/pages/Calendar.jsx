@@ -3,7 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
-import api from '../services/api';
+import api from '../api/axios';
 import { Loader2 } from 'lucide-react';
 import FolioDetailsModal from '../components/FolioDetailsModal';
 
