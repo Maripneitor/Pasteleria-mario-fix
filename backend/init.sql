@@ -7,87 +7,18 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 # ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: clients
+# DROP (para evitar conflictos al reimportar)
 # ------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS `clients` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `phone` varchar(255) NOT NULL,
-  `branch_id` bigint DEFAULT NULL,
-  `createdAt` datetime NOT NULL,
-  `updatedAt` datetime NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `phone` (`phone`)
-) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: folio_edit_histories
-# ------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS `folio_edit_histories` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `createdAt` datetime NOT NULL,
-  `folioId` int DEFAULT NULL,
-  `editorUserId` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `folioId` (`folioId`),
-  KEY `editorUserId` (`editorUserId`),
-  CONSTRAINT `folio_edit_histories_ibfk_1` FOREIGN KEY (`folioId`) REFERENCES `folios` (`id`) ON DELETE
-  SET
-  NULL ON UPDATE CASCADE,
-  CONSTRAINT `folio_edit_histories_ibfk_2` FOREIGN KEY (`editorUserId`) REFERENCES `users` (`id`) ON DELETE
-  SET
-  NULL ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-# ------------------------------------------------------------
-# SCHEMA DUMP FOR TABLE: folios
-# ------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS `folios` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `folioNumber` varchar(255) NOT NULL,
-  `folioType` enum('Sencillo', 'Especial') NOT NULL,
-  `deliveryDate` date NOT NULL,
-  `deliveryTime` time NOT NULL,
-  `persons` int NOT NULL,
-  `cakeFlavor` text NOT NULL,
-  `filling` text,
-  `designDescription` text NOT NULL,
-  `dedication` varchar(255) DEFAULT NULL,
-  `deliveryLocation` varchar(255) NOT NULL,
-  `total` decimal(10, 2) NOT NULL,
-  `advancePayment` decimal(10, 2) NOT NULL DEFAULT '0.00',
-  `balance` decimal(10, 2) NOT NULL,
-  `status` enum(
-  'Nuevo',
-  'En Producción',
-  'Listo para Entrega',
-  'Entregado',
-  'Cancelado'
-  ) DEFAULT 'Nuevo',
-  `createdAt` datetime NOT NULL,
-  `updatedAt` datetime NOT NULL,
-  `responsibleUserId` int DEFAULT NULL,
-  `clientId` int DEFAULT NULL,
-  `branch_id` bigint DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `folioNumber` (`folioNumber`),
-  KEY `responsibleUserId` (`responsibleUserId`),
-  KEY `clientId` (`clientId`),
-  CONSTRAINT `folios_ibfk_1` FOREIGN KEY (`responsibleUserId`) REFERENCES `users` (`id`) ON DELETE
-  SET
-  NULL ON UPDATE CASCADE,
-  CONSTRAINT `folios_ibfk_2` FOREIGN KEY (`clientId`) REFERENCES `clients` (`id`) ON DELETE
-  SET
-  NULL ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+DROP TABLE IF EXISTS `user_roles`;
+DROP TABLE IF EXISTS `roles`;
+DROP TABLE IF EXISTS `folio_edit_histories`;
+DROP TABLE IF EXISTS `folios`;
+DROP TABLE IF EXISTS `clients`;
+DROP TABLE IF EXISTS `users`;
 
 # ------------------------------------------------------------
 # SCHEMA DUMP FOR TABLE: users
 # ------------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
@@ -108,11 +39,92 @@ CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
 # ------------------------------------------------------------
+# SCHEMA DUMP FOR TABLE: clients
+# ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `clients` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(255) NOT NULL,
+  `branch_id` bigint DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `phone` (`phone`)
+) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+# ------------------------------------------------------------
+# SCHEMA DUMP FOR TABLE: folios
+# ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `folios` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `folioNumber` varchar(255) NOT NULL,
+  `folioType` enum('Sencillo', 'Especial') NOT NULL,
+  `deliveryDate` date NOT NULL,
+  `deliveryTime` time NOT NULL,
+  `persons` int NOT NULL,
+  `cakeFlavor` text NOT NULL,
+  `filling` text,
+  `designDescription` text NOT NULL,
+  `dedication` varchar(255) DEFAULT NULL,
+  `deliveryLocation` varchar(255) NOT NULL,
+  `total` decimal(10, 2) NOT NULL,
+  `advancePayment` decimal(10, 2) NOT NULL DEFAULT '0.00',
+  `balance` decimal(10, 2) NOT NULL,
+  `status` enum('Nuevo','En Producción','Listo para Entrega','Entregado','Cancelado') DEFAULT 'Nuevo',
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `responsibleUserId` int DEFAULT NULL,
+  `clientId` int DEFAULT NULL,
+  `branch_id` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `folioNumber` (`folioNumber`),
+  KEY `responsibleUserId` (`responsibleUserId`),
+  KEY `clientId` (`clientId`),
+  CONSTRAINT `folios_ibfk_1`
+    FOREIGN KEY (`responsibleUserId`) REFERENCES `users` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `folios_ibfk_2`
+    FOREIGN KEY (`clientId`) REFERENCES `clients` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+# ------------------------------------------------------------
+# SCHEMA DUMP FOR TABLE: folio_edit_histories
+# ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `folio_edit_histories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `createdAt` datetime NOT NULL,
+  `folioId` int DEFAULT NULL,
+  `editorUserId` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `folioId` (`folioId`),
+  KEY `editorUserId` (`editorUserId`),
+  CONSTRAINT `folio_edit_histories_ibfk_1`
+    FOREIGN KEY (`folioId`) REFERENCES `folios` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `folio_edit_histories_ibfk_2`
+    FOREIGN KEY (`editorUserId`) REFERENCES `users` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+# ------------------------------------------------------------
+# DATA DUMP FOR TABLE: users
+# ------------------------------------------------------------
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `createdAt`, `updatedAt`)
+VALUES
+  (
+    1,
+    'Isaac',
+    'isaac@lafiesta.com',
+    '$2b$10$/PCP5a2pzLMF6cjs/Hd03u.KN5r8yBymBHxvvsJf6k67p9L0ssi0.',
+    '2025-09-30 01:26:31',
+    '2025-09-30 01:26:31'
+  );
+
+# ------------------------------------------------------------
 # DATA DUMP FOR TABLE: clients
 # ------------------------------------------------------------
-
-INSERT INTO
-  `clients` (`id`, `name`, `phone`, `createdAt`, `updatedAt`)
+INSERT INTO `clients` (`id`, `name`, `phone`, `createdAt`, `updatedAt`)
 VALUES
   (
     1,
@@ -121,8 +133,8 @@ VALUES
     '2025-09-30 01:23:21',
     '2025-09-30 01:23:21'
   );
-INSERT INTO
-  `clients` (`id`, `name`, `phone`, `createdAt`, `updatedAt`)
+
+INSERT INTO `clients` (`id`, `name`, `phone`, `createdAt`, `updatedAt`)
 VALUES
   (
     2,
@@ -133,36 +145,29 @@ VALUES
   );
 
 # ------------------------------------------------------------
-# DATA DUMP FOR TABLE: folio_edit_histories
-# ------------------------------------------------------------
-
-
-# ------------------------------------------------------------
 # DATA DUMP FOR TABLE: folios
 # ------------------------------------------------------------
-
-INSERT INTO
-  `folios` (
-    `id`,
-    `folioNumber`,
-    `folioType`,
-    `deliveryDate`,
-    `deliveryTime`,
-    `persons`,
-    `cakeFlavor`,
-    `filling`,
-    `designDescription`,
-    `dedication`,
-    `deliveryLocation`,
-    `total`,
-    `advancePayment`,
-    `balance`,
-    `status`,
-    `createdAt`,
-    `updatedAt`,
-    `responsibleUserId`,
-    `clientId`
-  )
+INSERT INTO `folios` (
+  `id`,
+  `folioNumber`,
+  `folioType`,
+  `deliveryDate`,
+  `deliveryTime`,
+  `persons`,
+  `cakeFlavor`,
+  `filling`,
+  `designDescription`,
+  `dedication`,
+  `deliveryLocation`,
+  `total`,
+  `advancePayment`,
+  `balance`,
+  `status`,
+  `createdAt`,
+  `updatedAt`,
+  `responsibleUserId`,
+  `clientId`
+)
 VALUES
   (
     2,
@@ -187,28 +192,56 @@ VALUES
   );
 
 # ------------------------------------------------------------
-# DATA DUMP FOR TABLE: users
+# DATA DUMP FOR TABLE: folio_edit_histories
 # ------------------------------------------------------------
+-- (Sin registros)
 
-INSERT INTO
-  `users` (
-    `id`,
-    `username`,
-    `email`,
-    `password`,
-    `createdAt`,
-    `updatedAt`
-  )
+# ------------------------------------------------------------
+# SCHEMA DUMP FOR TABLE: roles
+# ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `roles` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `scope` enum('Global', 'Branch') DEFAULT 'Branch',
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+# ------------------------------------------------------------
+# SCHEMA DUMP FOR TABLE: user_roles
+# ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_roles` (
+  `user_id` int NOT NULL,
+  `role_id` int NOT NULL,
+  PRIMARY KEY (`user_id`, `role_id`),
+  CONSTRAINT `user_roles_ibfk_1`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `user_roles_ibfk_2`
+    FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+# ------------------------------------------------------------
+# DATA DUMP FOR ROLES & ADMIN
+# ------------------------------------------------------------
+INSERT INTO `roles` (`id`, `name`, `scope`, `description`) VALUES
+(1, 'Admin', 'Global', 'System Administrator'),
+(2, 'Owner', 'Branch', 'Branch Owner'),
+(3, 'Employee', 'Branch', 'Regular Employee');
+
+-- Insertar a Mario Admin con el hash correcto de 'Admin1234'
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `is_active`, `status`, `createdAt`, `updatedAt`)
 VALUES
-  (
-    1,
-    'Isaac',
-    'isaac@lafiesta.com',
-    '$2b$10$/PCP5a2pzLMF6cjs/Hd03u.KN5r8yBymBHxvvsJf6k67p9L0ssi0.',
-    '2025-09-30 01:26:31',
-    '2025-09-30 01:26:31'
-  );
+(3, 'Mario Admin', 'admin@gmail.com',
+ '$2b$10$7pXmFhLAn8BvH7Y/YpXoO.U7uI6X4S6M8R9Q0W1E2R3T4Y5U6I7O8',
+ 1, 'active', NOW(), NOW());
 
+-- Darle el poder de Admin a Mario
+INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (3, 1);
+
+# ------------------------------------------------------------
+# RESTORE SETTINGS
+# ------------------------------------------------------------
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
