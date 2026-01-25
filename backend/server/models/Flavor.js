@@ -12,30 +12,17 @@ const Flavor = sequelize.define('Flavor', {
         allowNull: false
         // Removed unique: true to allow multiple owners to have "Vanilla"
     },
-    ownerId: {
+    branchId: {
         type: DataTypes.INTEGER,
-        allowNull: true,
-        comment: 'Owner ID (Tenant). If null, it is a global/system flavor.'
+        allowNull: false,
+        field: 'branch_id',
+        comment: 'Branch this flavor belongs to'
     },
-    available: {
+    active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },
-    price: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0.00,
-        comment: 'Costo extra por sabor (opcional)'
-    },
-    isNormal: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        comment: 'Disponible para pasteles normales'
-    },
-    isTier: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        comment: 'Disponible para pisos de pasteles especiales'
-    }
+    // Invalid fields removed
 }, {
     tableName: 'flavors',
     timestamps: true,

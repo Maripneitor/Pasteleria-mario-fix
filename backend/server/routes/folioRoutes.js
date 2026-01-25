@@ -4,7 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const folioController = require('../controllers/folioController');
 // CAMBIO: Importa las herramientas del nuevo sistema RBAC
-const { authMiddleware, checkPermission } = require('../middleware/authMiddleware');
+const { authMiddleware, checkPermission, requireBranchMembership } = require('../middleware/authMiddleware');
 
 // Configuración de Multer: Disk Storage para evitar desbordamiento de memoria (DoS)
 const storage = multer.diskStorage({
@@ -35,6 +35,7 @@ const upload = multer({
 
 // CAMBIO: Asegúrate de que router.use reciba la función extraída
 router.use(authMiddleware);
+router.use(requireBranchMembership);
 
 // --- RUTA PARA PDFs MASIVOS (ETIQUETAS Y COMANDAS) ---
 router.get('/day-summary-pdf', checkPermission('folios.read'), folioController.generateDaySummaryPdf);
@@ -71,6 +72,9 @@ router.get('/:id/pdf', checkPermission('folios.read'), folioController.generateF
 
 // Ruta para generar el PDF de la etiqueta de un solo folio
 router.get('/:id/label-pdf', checkPermission('folios.read'), folioController.generateLabelPdf);
+
+// Ruta para historial
+router.get('/:id/history', checkPermission('folios.read'), folioController.getFolioHistory);
 
 // --- RUTA PARA MARCAR UN FOLIO COMO IMPRESO ---
 router.patch('/:id/mark-as-printed', checkPermission('folios.update'), folioController.markAsPrinted);

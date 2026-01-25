@@ -50,7 +50,53 @@ const AiInbox = () => {
                 <p className="text-gray-500 dark:text-gray-400">Procesa pedidos desde WhatsApp automáticamente.</p>
             </header>
 
-            <AiInboxComponent onOrderCreated={handleOrderCreated} />
+            {loading ? (
+                <div className="text-center p-10"><RefreshCw className="animate-spin mx-auto text-gray-400" /></div>
+            ) : sessions.length === 0 ? (
+                <div className="text-center p-10 bg-gray-50 rounded-lg dark:bg-slate-800">
+                    <MessageCircle size={48} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500">No hay mensajes recientes.</p>
+                </div>
+            ) : (
+                <div className="grid gap-4">
+                    {sessions.map(session => (
+                        <motion.div
+                            key={session.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-blue-300 transition-colors"
+                            onClick={() => navigate(`/folios/new?aiSession=${session.id}`)}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-full">
+                                    <Sparkles size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-800 dark:text-gray-200">
+                                        {session.clientName || 'Cliente Nuevo'}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 truncate max-w-md">
+                                        {session.lastMessage || 'Iniciando pedido...'}
+                                    </p>
+                                    <span className="text-xs text-gray-400">
+                                        {new Date(session.updatedAt || Date.now()).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={(e) => handleDiscard(session.id, e)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                    title="Descartar"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                                <ArrowRight className="text-gray-300" />
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

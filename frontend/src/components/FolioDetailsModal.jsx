@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import QRCode from "react-qr-code"; // Import QR Code
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, User, Phone, Clock, Cake, Layers, PenTool } from 'lucide-react';
@@ -100,6 +101,19 @@ const FolioDetailsModal = ({ folio, isOpen, onClose, onUpdate }) => {
                             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
                                 <X size={24} />
                             </button>
+                        </div>
+
+                        {/* QR Code Section - NEW */}
+                        <div className="bg-gray-50 border-b border-gray-100 p-4 flex flex-col items-center justify-center">
+                            <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                                <QRCode
+                                    value={`folio:${folio.id}`} // Or a real URL like `https://myapp.com/track/${folio.id}`
+                                    size={100}
+                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                    viewBox={`0 0 256 256`}
+                                />
+                            </div>
+                            <span className="text-[10px] text-gray-400 mt-2 font-mono uppercase tracking-wider">Escanear para Seguimiento</span>
                         </div>
 
                         {/* Content */}

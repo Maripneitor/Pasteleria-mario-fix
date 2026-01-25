@@ -46,6 +46,19 @@ Folio.belongsTo(User, { as: 'responsibleUser', foreignKey: 'responsibleUserId' }
 Client.hasMany(Folio, { foreignKey: 'clientId' });
 Folio.belongsTo(Client, { as: 'client', foreignKey: 'clientId' });
 
+// --- Associations fixed for Audit ---
+Folio.hasOne(Commission, { foreignKey: 'folioId', as: 'commission' });
+Commission.belongsTo(Folio, { foreignKey: 'folioId' });
+
+Folio.hasMany(FolioEditHistory, { foreignKey: 'folioId', as: 'editHistory' });
+FolioEditHistory.belongsTo(Folio, { foreignKey: 'folioId' });
+FolioEditHistory.belongsTo(User, { foreignKey: 'editorUserId', as: 'editor' });
+
+Folio.hasMany(FolioHistory, { foreignKey: 'folioId' });
+FolioHistory.belongsTo(Folio, { foreignKey: 'folioId' });
+FolioHistory.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+FolioHistory.belongsTo(Branch, { foreignKey: 'branchId' });
+
 module.exports = {
   sequelize, User, Client, Folio, FolioEditHistory, Commission, AISession, Flavor, Filling, SystemLog,
   Organization, Branch, UserBranchMembership, Role, Permission, RolePermission, UserRole,

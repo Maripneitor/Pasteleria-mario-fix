@@ -2,44 +2,23 @@ const { Flavor, Filling } = require('../models');
 const { Op } = require('sequelize');
 
 const ingredientController = {
-    // --- SEEDING (Idempotent & Safe) ---
+    // --- SEEDING (Skipped) ---
     seedIngredients: async () => {
-        // Only run if table is empty to avoid duplicates on every restart
-        // In a real migration, we'd use migration files.
-        // For now, we leave this as is or modify to just log.
-        // Skipping auto-seed to prevent overwriting dynamic data with defaults repeatedly.
         console.log("ℹ️ Seeding logic skipped to preserve dynamic data compatibility.");
     },
 
     // --- FLAVORS ---
     getFlavors: async (req, res) => {
         try {
-            const user = req.user;
-            let whereClause = {};
+            // Contexto de Tenancy (Branch)
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            if (user) {
-                // Logic: Show Global Items (ownerId: null) AND User's Owner Items
-                const rootOwnerId = user.role === 'Dueño' ? user.id : user.ownerId;
-                if (rootOwnerId) {
-                    whereClause = {
-                        [Op.or]: [
-                            { ownerId: null },
-                            { ownerId: rootOwnerId }
-                        ]
-                    };
-                } else {
-                    // Fallback for independent users or super-admins without ownerId check??
-                    // If User role has no ownerId (e.g. initial super admin), maybe show everything?
-                    // Let's stick to safe default: Global Only if no specific owner context
-                    whereClause = { ownerId: null };
-                }
-            } else {
-                // Public access? Maybe allow global only
-                whereClause = { ownerId: null };
+            if (!branchId) {
+                return res.status(400).json({ message: "Contexto de sucursal requerido (X-Branch-ID)." });
             }
 
-            // Optional: Filter by 'available: true' for frontend selectors, but admin table needs all.
-            // Let's create a query param `onlyAvailable=true`
+            let whereClause = { branchId };
+
             if (req.query.onlyAvailable === 'true') {
                 whereClause.available = true;
             }
@@ -58,27 +37,16 @@ const ingredientController = {
     addFlavor: async (req, res) => {
         try {
             const { name, isNormal, isTier, price } = req.body;
-            const user = req.user;
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            // Determine Owner ID
-            let ownerId = null;
-            if (user.role === 'Dueño') {
-                ownerId = user.id;
-            } else if (user.ownerId) {
-                ownerId = user.ownerId; // Employees create for their boss
-            } else if (user.role === 'Administrador') {
-                // Admins can create Global items (ownerId = null)
-                ownerId = null;
-            } else {
-                return res.status(403).json({ message: "No tienes permiso para crear sabores." });
-            }
+            if (!branchId) return res.status(400).json({ message: "Contexto de sucursal requerido." });
 
             const newFlavor = await Flavor.create({
                 name,
                 isNormal: isNormal || false,
                 isTier: isTier || false,
                 price: price || 0,
-                ownerId: ownerId,
+                branchId: branchId,
                 available: true
             });
             res.json(newFlavor);
@@ -91,21 +59,10 @@ const ingredientController = {
         try {
             const { id } = req.params;
             const { name, isNormal, isTier, price, available } = req.body;
-            const user = req.user;
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            const flavor = await Flavor.findByPk(id);
-            if (!flavor) return res.status(404).json({ message: "Sabor no encontrado" });
-
-            // Security: Same as delete
-            const isGlobal = flavor.ownerId === null;
-            const isMyItem = user.role === 'Dueño' && flavor.ownerId === user.id;
-
-            if (isGlobal && user.role !== 'Administrador') {
-                return res.status(403).json({ message: "No puedes editar ítems globales." });
-            }
-            if (!isGlobal && !isMyItem && user.role !== 'Administrador') {
-                return res.status(403).json({ message: "No puedes editar este sabor." });
-            }
+            const flavor = await Flavor.findOne({ where: { id, branchId } });
+            if (!flavor) return res.status(404).json({ message: "Sabor no encontrado en esta sucursal." });
 
             await flavor.update({
                 name: name !== undefined ? name : flavor.name,
@@ -124,26 +81,10 @@ const ingredientController = {
     deleteFlavor: async (req, res) => {
         try {
             const { id } = req.params;
-            const user = req.user;
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            const flavor = await Flavor.findByPk(id);
-            if (!flavor) return res.status(404).json({ message: "Sabor no encontrado" });
-
-            // Security Check: Can only delete if you own it
-            // Admin can delete anything? Maybe.
-            // Global items (ownerId: null) can only be deleted by Admin.
-
-            const isGlobal = flavor.ownerId === null;
-            const isMyItem = user.role === 'Dueño' && flavor.ownerId === user.id;
-            const isMyBossItem = user.ownerId && flavor.ownerId === user.ownerId; // Employees usually shouldn't delete, but let's allow if authorized (middleware handles role)
-
-            if (isGlobal && user.role !== 'Administrador') {
-                return res.status(403).json({ message: "No puedes eliminar ítems globales del sistema." });
-            }
-
-            if (!isGlobal && !isMyItem && user.role !== 'Administrador') { // Simplify checks
-                return res.status(403).json({ message: "No puedes eliminar este sabor." });
-            }
+            const flavor = await Flavor.findOne({ where: { id, branchId } });
+            if (!flavor) return res.status(404).json({ message: "Sabor no encontrado en esta sucursal." });
 
             await flavor.destroy();
             res.json({ message: 'Sabor eliminado' });
@@ -155,24 +96,10 @@ const ingredientController = {
     // --- FILLINGS ---
     getFillings: async (req, res) => {
         try {
-            const user = req.user;
-            let whereClause = {};
+            const branchId = req.tenant ? req.tenant.branchId : null;
+            if (!branchId) return res.status(400).json({ message: "Contexto de sucursal requerido." });
 
-            if (user) {
-                const rootOwnerId = user.role === 'Dueño' ? user.id : user.ownerId;
-                if (rootOwnerId) {
-                    whereClause = {
-                        [Op.or]: [
-                            { ownerId: null },
-                            { ownerId: rootOwnerId }
-                        ]
-                    };
-                } else {
-                    whereClause = { ownerId: null };
-                }
-            } else {
-                whereClause = { ownerId: null };
-            }
+            let whereClause = { branchId };
 
             if (req.query.onlyAvailable === 'true') {
                 whereClause.available = true;
@@ -192,13 +119,9 @@ const ingredientController = {
     addFilling: async (req, res) => {
         try {
             const { name, isPaid, suboptions, price } = req.body;
-            const user = req.user;
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            let ownerId = null;
-            if (user.role === 'Dueño') ownerId = user.id;
-            else if (user.ownerId) ownerId = user.ownerId;
-            else if (user.role === 'Administrador') ownerId = null;
-            else return res.status(403).json({ message: "No tienes permiso." });
+            if (!branchId) return res.status(400).json({ message: "Contexto de sucursal requerido." });
 
             // Parse suboptions
             let parsedSubs = suboptions;
@@ -211,7 +134,7 @@ const ingredientController = {
                 isPaid: isPaid || false,
                 suboptions: parsedSubs || [],
                 price: price || 0,
-                ownerId: ownerId,
+                branchId: branchId,
                 available: true
             });
             res.json(newFilling);
@@ -224,16 +147,10 @@ const ingredientController = {
         try {
             const { id } = req.params;
             const { name, isPaid, suboptions, price, available } = req.body;
-            const user = req.user;
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            const filling = await Filling.findByPk(id);
-            if (!filling) return res.status(404).json({ message: "Relleno no encontrado" });
-
-            const isGlobal = filling.ownerId === null;
-            const isMyItem = user.role === 'Dueño' && filling.ownerId === user.id;
-
-            if (isGlobal && user.role !== 'Administrador') return res.status(403).json({ message: "No permitido en globales." });
-            if (!isGlobal && !isMyItem && user.role !== 'Administrador') return res.status(403).json({ message: "No permitido." });
+            const filling = await Filling.findOne({ where: { id, branchId } });
+            if (!filling) return res.status(404).json({ message: "Relleno no encontrado en esta sucursal." });
 
             // Parse suboptions
             let parsedSubs = suboptions;
@@ -257,20 +174,10 @@ const ingredientController = {
     deleteFilling: async (req, res) => {
         try {
             const { id } = req.params;
-            const user = req.user;
+            const branchId = req.tenant ? req.tenant.branchId : null;
 
-            const filling = await Filling.findByPk(id);
-            if (!filling) return res.status(404).json({ message: "Relleno no encontrado" });
-
-            const isGlobal = filling.ownerId === null;
-            const isMyItem = (user.role === 'Dueño' && filling.ownerId === user.id) || (user.ownerId && filling.ownerId === user.ownerId);
-
-            if (isGlobal && user.role !== 'Administrador') {
-                return res.status(403).json({ message: "No puedes eliminar ítems globales." });
-            }
-            if (!isGlobal && !isMyItem && user.role !== 'Administrador') {
-                return res.status(403).json({ message: "No tienes permiso para eliminar este relleno." });
-            }
+            const filling = await Filling.findOne({ where: { id, branchId } });
+            if (!filling) return res.status(404).json({ message: "Relleno no encontrado." });
 
             await filling.destroy();
             res.json({ message: 'Relleno eliminado' });

@@ -3,12 +3,12 @@ const { sequelize } = require('../config/database');
 
 const UserRole = sequelize.define('UserRole', {
     userId: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.INTEGER,
         primaryKey: true,
         field: 'user_id'
     },
     roleId: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.INTEGER,
         primaryKey: true,
         field: 'role_id'
     },

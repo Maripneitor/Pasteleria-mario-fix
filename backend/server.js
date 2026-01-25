@@ -22,6 +22,7 @@ const aiSessionRoutes = require('./server/routes/aiSessionRoutes');
 const testRoutes = require('./server/routes/testRoutes');
 const dictationRoutes = require('./server/routes/dictationRoutes');
 const ingredientRoutes = require('./server/routes/ingredientRoutes');
+const branchRoutes = require('./server/routes/branchRoutes');
 const ingredientController = require('./server/controllers/ingredientController');
 const createDevUser = require('./scripts/create-dev-user');
 
@@ -38,13 +39,15 @@ conectarDB();
 // --- MIDDLEWARES DE SEGURIDAD Y CONFIGURACIÓN ---
 app.use(helmet()); // Headers de seguridad HTTP
 
-// CORS Configurado para Multi-tenant
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Branch-ID', 'X-Org-ID'], // Permitir headers de tenant
+// CORS Configurado para Multi-tenant y Producción
+const corsOptions = {
+  origin: ['http://localhost', 'http://localhost:5173', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Branch-ID', 'X-Org-ID'],
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Rate Limit Global para prevenir DoS básico
 const globalLimiter = rateLimit({
@@ -76,6 +79,8 @@ app.use('/api/ai-sessions', aiSessionRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/dictation', dictationRoutes);
 app.use('/api/ingredients', ingredientRoutes);
+app.use('/api/ai', require('./server/routes/aiRoutes')); // Task 4 Fix
+app.use('/api/branches', branchRoutes);
 
 // --- INICIO DEL SERVIDOR SEGURO ---
 // Eliminamos alter:true y migraciones manuales del código de arranque

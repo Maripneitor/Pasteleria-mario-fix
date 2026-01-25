@@ -46,13 +46,16 @@ const IngredientPicker = ({
     const handleToggle = (option) => {
         if (disabled) return;
 
-        const isSelected = selected.some(s => s === option.name); // Store names or objects? Prompt says tags, usually names for simplicity in backend
+        // Check if currently selected (assuming selected is array of objects {id, name} or legacy strings)
+        // Hybrid support for legacy strings if needed, but per plan we move to objects.
+        const isSelected = selected.some(s => (s.id && s.id === option.id) || s === option.name);
 
         let newSelected;
         if (isSelected) {
-            newSelected = selected.filter(s => s !== option.name);
+            newSelected = selected.filter(s => (s.id ? s.id !== option.id : s !== option.name));
         } else {
-            newSelected = [...selected, option.name];
+            // Add as object {id, name}
+            newSelected = [...selected, { id: option.id, name: option.name }];
         }
         onChange(newSelected);
     };
@@ -64,7 +67,7 @@ const IngredientPicker = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
             <div className={`flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
                 {options.map(opt => {
-                    const isSelected = selected.includes(opt.name);
+                    const isSelected = selected.some(s => (s.id && s.id === opt.id) || s === opt.name);
                     return (
                         <button
                             key={opt.id || opt.name}

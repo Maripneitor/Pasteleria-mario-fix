@@ -2,12 +2,11 @@ const express = require('express');
 const router = express.Router();
 const ingredientController = require('../controllers/ingredientController');
 // Cambia 'verifyToken' por la desestructuración de 'authMiddleware'
-const { authMiddleware: verifyToken } = require('../middleware/authMiddleware');
-// const authorize = require('../middleware/roleMiddleware'); // Si se requiere restricción de rol
+const { authMiddleware: verifyToken, requireBranchMembership } = require('../middleware/authMiddleware');
 
-// Rutas públicas para obtener listas (usadas en el formulario)
-router.get('/flavors', ingredientController.getFlavors);
-router.get('/fillings', ingredientController.getFillings);
+// Rutas protegidas y con contexto de sucursal
+router.get('/flavors', verifyToken, requireBranchMembership, ingredientController.getFlavors);
+router.get('/fillings', verifyToken, requireBranchMembership, ingredientController.getFillings);
 
 // Rutas protegidas para gestión (solo admin o usuarios autenticados según se prefiera)
 // Por ahora usamos verifyToken para que al menos estén logueados

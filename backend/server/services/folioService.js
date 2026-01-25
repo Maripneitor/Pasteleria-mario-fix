@@ -66,10 +66,10 @@ class FolioService {
         let finalAdvancePayment = parseFloat(advancePayment) || 0;
 
         if (isPaid === true || isPaid === 'true') {
-            finalAdvancePayment = totalBeforeAdvance;
+            finalAdvancePayment = total;
         }
 
-        const balance = totalBeforeAdvance - finalAdvancePayment;
+        const balance = total - finalAdvancePayment;
         const finalIsPaid = balance <= 0.01; // Tolerancia de centavos
 
         return {
@@ -77,7 +77,7 @@ class FolioService {
             fillingCost: parseFloat(fillingCost.toFixed(2)),
             commission: parseFloat(roundedCommission.toFixed(2)),
             rawCommission: parseFloat(commissionAmount.toFixed(2)), // Por si se necesita el valor exacto
-            total: parseFloat(totalBeforeAdvance.toFixed(2)),
+            total: parseFloat(total.toFixed(2)),
             anticipoMinimo: parseFloat(anticipoMinimo.toFixed(2)),
             advancePayment: parseFloat(finalAdvancePayment.toFixed(2)),
             balance: parseFloat(balance.toFixed(2)),

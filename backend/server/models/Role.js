@@ -3,7 +3,7 @@ const { sequelize } = require('../config/database');
 
 const Role = sequelize.define('Role', {
     id: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
     },
@@ -24,8 +24,7 @@ const Role = sequelize.define('Role', {
 }, {
     tableName: 'roles',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: false // Only created_at in SQL schema
+    paranoid: true // Matches deletedAt in SQL
 });
 
 module.exports = Role;

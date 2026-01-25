@@ -33,6 +33,8 @@ const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 const AdminOwnerManagement = lazy(() => import('./pages/AdminOwnerManagement'));
 const AdminGlobalAnalytics = lazy(() => import('./pages/AdminGlobalAnalytics'));
 const AdminUserManagement = lazy(() => import('./pages/AdminUserManagement'));
+const AdminTenantControl = lazy(() => import('./pages/AdminTenantControl'));
+const BranchSettings = lazy(() => import('./pages/BranchSettings')); // New Route // New Route
 const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
 const DeveloperDashboard = lazy(() => import('./pages/DeveloperDashboard'));
 const BakeryConfig = lazy(() => import('./pages/BakeryConfig'));
@@ -60,6 +62,7 @@ const AnimatedRoutes = () => {
             <Route path="/admin/owners" element={<AdminOwnerManagement />} />
             <Route path="/admin/global-analytics" element={<AdminGlobalAnalytics />} />
             <Route path="/admin/users" element={<AdminUserManagement />} />
+            <Route path="/admin/tenants" element={<AdminTenantControl />} />
           </Route>
 
           {/* Owner & Developer Routes */}
@@ -71,6 +74,7 @@ const AnimatedRoutes = () => {
             <Route path="/clientes" element={<PageTransition><Clients /></PageTransition>} />
             <Route path="/inventario" element={<PageTransition><Statistics /></PageTransition>} /> {/* Placeholder for Inventory */}
             <Route path="/configuracion" element={<PageTransition><BakeryConfig /></PageTransition>} />
+            <Route path="/configuracion/sucursal" element={<PageTransition><BranchSettings /></PageTransition>} />
           </Route>
 
           {/* Employee, Owner & Developer (Production & Folios) */}

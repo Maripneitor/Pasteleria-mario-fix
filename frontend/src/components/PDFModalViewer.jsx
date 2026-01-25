@@ -1,21 +1,93 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Document, Page, Text, View, StyleSheet, PDFViewer, Image as PdfImage } from '@react-pdf/renderer';
 import api from '../api/axios';
 
+// --- PDF STYLES ---
+const createStyles = (primaryColor = '#000000') => StyleSheet.create({
+    page: { flexDirection: 'column', backgroundColor: '#FFFFFF', padding: 20 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, borderBottomWidth: 2, borderBottomColor: primaryColor, paddingBottom: 10 },
+    headerText: { flexDirection: 'column' },
+    title: { fontSize: 24, fontWeight: 'bold', color: primaryColor },
+    subtitle: { fontSize: 12, color: '#666' },
+    logo: { width: 80, height: 80, objectFit: 'contain' },
+    section: { margin: 10, padding: 10, flexGrow: 1 },
+    row: { flexDirection: 'row', marginBottom: 5 },
+    label: { width: 100, fontSize: 10, fontWeight: 'bold', color: '#444' },
+    value: { flex: 1, fontSize: 10 },
+    tableHeader: { backgroundColor: primaryColor, color: 'white', padding: 5, fontSize: 10, flexDirection: 'row' },
+    tableRow: { borderBottomWidth: 1, borderBottomColor: '#EEE', padding: 5, fontSize: 10, flexDirection: 'row' }
+});
+
+// --- PDF COMPONENT ---
+const MyDocument = ({ folio, branchConfig }) => {
+    const styles = createStyles(branchConfig?.primaryColor || '#000000');
+    // Ensure data exists
+    if (!folio) return <Document><Page><Text>No Data</Text></Page></Document>;
+
+    return (
+        <Document>
+            <Page size="LETTER" style={styles.page}>
+                <View style={styles.header}>
+                    <View style={styles.headerText}>
+                        <Text style={styles.title}>{branchConfig?.name || 'Pastelería'}</Text>
+                        <Text style={styles.subtitle}>Folio: #{folio.folioNumber}</Text>
+                        <Text style={styles.subtitle}>Fecha: {new Date(folio.deliveryDate).toLocaleDateString()}</Text>
+                        <Text style={styles.subtitle}>Cliente: {folio.clientName}</Text>
+                    </View>
+                    {branchConfig?.logoUrl ? (
+                        // Note: React-PDF Image requires valid URL or base64. 
+                        // CORS might block external URLs if not configured.
+                        <PdfImage src={branchConfig.logoUrl} style={styles.logo} />
+                    ) : null}
+                </View>
+
+                {/* Content */}
+                <View style={styles.section}>
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Descripción:</Text>
+                        <Text style={styles.value}>{folio.designDescription || 'Sin descripción'}</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Sabor:</Text>
+                        {/* Task: Map IDs to names. Assuming backend populated these or we show ID for now? 
+                            Ideally backend include: Flavor model. If not, text is ID. 
+                            Frontend refactor was FolioForm. 
+                            If we want Names, we need `include` in backend or lookup here. 
+                            For now, display raw or check if object available. 
+                        */}
+                        <Text style={styles.value}>
+                            {/* Attempt to show name if object, else ID */}
+                            {typeof folio.cakeFlavor === 'object' ? folio.cakeFlavor?.name : folio.flavorId || folio.cakeFlavor}
+                        </Text>
+                    </View>
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Relleno:</Text>
+                        <Text style={styles.value}>
+                            {typeof folio.filling === 'object' ? folio.filling?.name : folio.fillingId || folio.filling}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Footer */}
+                <View style={{ position: 'absolute', bottom: 30, left: 0, right: 0, textAlign: 'center' }}>
+                    <Text style={{ fontSize: 8, color: '#999' }}>Generado digitalmente por {branchConfig?.name || 'Sistema'}</Text>
+                </View>
+            </Page>
+        </Document>
+    );
+};
+
+// --- VIEWER MODAL ---
 const PDFModalViewer = ({ isOpen, onClose, folio, onPrev, onNext, hasPrev, hasNext }) => {
-    const [pdfUrl, setPdfUrl] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [branchConfig, setBranchConfig] = useState(null);
 
     useEffect(() => {
-        if (isOpen && folio) {
-            setLoading(true);
-            // Construct PDF URL
-            // Assuming backend serves PDF at /api/folios/:id/pdf
-            // We use a blob URL to handle auth headers if needed, or direct URL if public/cookie based.
-            // For now, let's try direct URL with the proxy.
-            const url = `/api/folios/${folio.id}/pdf`;
-            setPdfUrl(url);
-            setLoading(false);
+        if (isOpen && folio?.branchId) {
+            // Fetch configuration for the specific branch of the folio
+            api.get(`/branches/${folio.branchId}`)
+                .then(res => setBranchConfig(res.data))
+                .catch(err => console.error("Error fetching branch config for PDF", err));
         }
     }, [isOpen, folio]);
 
@@ -23,87 +95,19 @@ const PDFModalViewer = ({ isOpen, onClose, folio, onPrev, onNext, hasPrev, hasNe
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            {/* Modal Content */}
             <div className="bg-white w-full h-full md:w-[90vw] md:h-[90vh] md:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative">
 
                 {/* Header */}
                 <div className="bg-gray-900 text-white p-4 flex justify-between items-center shrink-0">
-                    <div className="flex flex-col">
-                        <h3 className="text-lg font-bold flex items-center gap-2">
-                            <span>Folio #{folio.folioNumber || folio.id}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${folio.status === 'Entregado' ? 'bg-green-500' : 'bg-blue-500'}`}>
-                                {folio.status}
-                            </span>
-                        </h3>
-                        <p className="text-sm text-gray-400">
-                            {folio.clientName} • {new Date(folio.deliveryDate).toLocaleDateString()}
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <a
-                            href={pdfUrl}
-                            download={`Folio_${folio.id}.pdf`}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-300 hover:text-white"
-                            title="Descargar"
-                        >
-                            <Download size={20} />
-                        </a>
-                        <a
-                            href={pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-300 hover:text-white"
-                            title="Abrir en nueva pestaña"
-                        >
-                            <ExternalLink size={20} />
-                        </a>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-red-500 rounded-full transition-colors text-gray-300 hover:text-white ml-2"
-                        >
-                            <X size={24} />
-                        </button>
-                    </div>
+                    <h3 className="text-lg font-bold">Vista Previa - {folio.folioNumber}</h3>
+                    <button onClick={onClose}><X size={24} /></button>
                 </div>
 
-                {/* Toolbar / Navigation */}
-                <div className="bg-gray-100 border-b p-2 flex justify-between items-center">
-                    <button
-                        onClick={onPrev}
-                        disabled={!hasPrev}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-700 shadow-sm"
-                    >
-                        <ChevronLeft size={16} />
-                        <span>Anterior</span>
-                    </button>
-
-                    <span className="text-xs font-mono text-gray-500 uppercase tracking-widest hidden md:block">
-                        Visor de Pedidos
-                    </span>
-
-                    <button
-                        onClick={onNext}
-                        disabled={!hasNext}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-700 shadow-sm"
-                    >
-                        <span>Siguiente</span>
-                        <ChevronRight size={16} />
-                    </button>
-                </div>
-
-                {/* PDF Viewer Area */}
-                <div className="flex-1 bg-gray-500 relative">
-                    {loading && (
-                        <div className="absolute inset-0 flex items-center justify-center text-white">
-                            Cargando documento...
-                        </div>
-                    )}
-                    <iframe
-                        src={pdfUrl}
-                        className="w-full h-full border-none"
-                        title="PDF Viewer"
-                    />
+                {/* Viewer */}
+                <div className="flex-1 bg-gray-500">
+                    <PDFViewer width="100%" height="100%" className="border-none">
+                        <MyDocument folio={folio} branchConfig={branchConfig} />
+                    </PDFViewer>
                 </div>
             </div>
         </div>

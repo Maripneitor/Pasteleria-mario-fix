@@ -9,6 +9,7 @@ import ImageAnalyzer from './ImageAnalyzer';
 import VisualCakeBuilder from './VisualCakeBuilder';
 import ProductionLabelPreview from './ProductionLabelPreview';
 import api from '../api/axios';
+import { runAiMappingTest } from '../utils/aiMappingTest'; // Import Test Utility
 
 // --- Constants & Helpers ---
 const BLOCKED_FLAVORS = ['Mil Hojas', 'Pastel de Queso'];
@@ -69,7 +70,11 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
 
     // --- Business Logic 1: Blocking Fillings ---
     const isFillingBlocked = useMemo(() => {
-        return watchedFlavors.some(f => BLOCKED_FLAVORS.includes(f));
+        // Updated to handle objects or strings
+        return watchedFlavors.some(f => {
+            const name = typeof f === 'string' ? f : f.name;
+            return BLOCKED_FLAVORS.includes(name);
+        });
     }, [watchedFlavors]);
 
     useEffect(() => {
@@ -168,10 +173,30 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
             formData.append('addCommissionToCustomer', data.addCommissionToCustomer);
 
             // Append complex objects as JSON strings
-            formData.append('cakeFlavor', JSON.stringify(data.cakeFlavor)); // Assuming array
-            // Map fillings to objects expected by backend
-            const fillingObjects = data.filling.map(f => ({ name: f, hasCost: false }));
-            formData.append('filling', JSON.stringify(fillingObjects));
+            // formData.append('cakeFlavor', JSON.stringify(data.cakeFlavor)); // REMOVED LEGACY ARRAY SEND
+
+            // --- NEW: Map to IDs ---
+            // Backend expects single flavorId/fillingId for Normal type. UI allows multiple selection (IngredientPicker).
+            // We take the FIRST selection's ID.
+            if (folioType === 'Normal') {
+                if (data.cakeFlavor && data.cakeFlavor.length > 0) {
+                    // Check if object or string (legacy)
+                    const primaryFlavor = data.cakeFlavor[0];
+                    if (primaryFlavor.id) {
+                        formData.append('flavorId', parseInt(primaryFlavor.id, 10)); // Force Integer
+                    } else if (typeof primaryFlavor === 'object' && primaryFlavor.name) {
+                        console.warn("Flavor without ID:", primaryFlavor);
+                    }
+                }
+
+                if (data.filling && data.filling.length > 0) {
+                    const primaryFilling = data.filling[0];
+                    if (primaryFilling.id) {
+                        formData.append('fillingId', parseInt(primaryFilling.id, 10)); // Force Integer
+                    }
+                }
+            }
+
             formData.append('tiers', JSON.stringify(folioType === 'Base/Especial' ? data.tiers : []));
             formData.append('additional', JSON.stringify(data.additional));
 
@@ -189,7 +214,12 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
 
             if (onSuccess) onSuccess();
         } catch (error) {
-            alert('Error al guardar: ' + (error.response?.data?.message || error.message));
+            console.error("Submission Error", error);
+            if (error.response?.status === 403 && (error.response?.data?.code === 'LIMIT_EXCEEDED' || error.response?.data?.message?.includes('límite'))) {
+                alert("⛔ LÍMITE DE SUSCRIPCIÓN ALCANZADO\n\nContacte a soporte para ampliar su plan.");
+            } else {
+                alert('Error al guardar: ' + (error.response?.data?.message || error.message));
+            }
         }
     };
 
@@ -239,6 +269,36 @@ const FolioForm = ({ onCancel, onSuccess, initialData }) => {
                     </button>
                 </div>
             </div>
+
+            {/* --- DEV TEST BUTTON --- */}
+            {isAdminOrDev && (
+                <div className="bg-gray-100 dark:bg-slate-800 p-2 text-center text-xs">
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            // Fetch catalogs on demand for test
+                            try {
+                                const [fRes, fiRes] = await Promise.all([
+                                    api.get('/ingredients/flavors'),
+                                    api.get('/ingredients/fillings')
+                                ]);
+                                const catalogs = {
+                                    flavors: fRes.data,
+                                    fillings: fiRes.data
+                                };
+                                runAiMappingTest(catalogs);
+                                alert('Test ejecutado. Revisa la consola.');
+                            } catch (e) {
+                                console.error("Test failed to fetch catalogs", e);
+                                alert('Error obteniendo catálogos para test');
+                            }
+                        }}
+                        className="text-gray-500 hover:text-blue-500 underline"
+                    >
+                        🧪 Ejecutar Prueba Estrés AI
+                    </button>
+                </div>
+            )}
 
             <div className="flex-1 overflow-y-auto w-full bg-white dark:bg-bakery-dark-card">
                 <div className="flex flex-col lg:flex-row min-h-full">

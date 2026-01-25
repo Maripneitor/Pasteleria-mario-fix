@@ -11,12 +11,13 @@ const Filling = sequelize.define('Filling', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    ownerId: {
+    branchId: {
         type: DataTypes.INTEGER,
-        allowNull: true,
-        comment: 'Owner ID (Tenant). If null, it is a global/system filling.'
+        allowNull: false,
+        field: 'branch_id',
+        comment: 'Branch this filling belongs to'
     },
-    available: {
+    active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },

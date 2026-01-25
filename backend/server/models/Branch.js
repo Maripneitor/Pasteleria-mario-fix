@@ -31,17 +31,13 @@ const Branch = sequelize.define('Branch', {
         defaultValue: 5,
         field: 'max_employees_allowed'
     },
-    isMain: {
+    // isMain removed as it is not in valid schema
+    isActive: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-        field: 'is_main'
+        defaultValue: true,
+        field: 'is_active'
     },
-    status: {
-        type: DataTypes.ENUM('Active', 'Closed'),
-        allowNull: false,
-        defaultValue: 'Active'
-    }
+    // Invalid fields removed
 }, {
     tableName: 'branches',
     timestamps: true,

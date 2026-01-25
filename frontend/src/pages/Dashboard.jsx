@@ -113,7 +113,7 @@ const Dashboard = () => {
                 <div className="lg:col-span-2">
                     <SalesChart data={salesData} />
                 </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1" style={{ width: '100%', height: '300px', minHeight: '300px' }}>
                     <FlavorChart data={flavorData} />
                 </div>
             </div>

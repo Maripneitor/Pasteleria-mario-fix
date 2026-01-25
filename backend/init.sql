@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS `folios` (
   -- Anti-errores: el cliente debe pertenecer al mismo branch que el folio
   CONSTRAINT `folios_ibfk_client_branch`
     FOREIGN KEY (`clientId`, `branch_id`) REFERENCES `clients` (`id`, `branch_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE,
+    ON DELETE RESTRICT ON UPDATE CASCADE,
 
   CONSTRAINT `folios_ibfk_user`
     FOREIGN KEY (`responsibleUserId`) REFERENCES `users` (`id`)
@@ -261,6 +261,35 @@ CREATE TABLE IF NOT EXISTS `roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
+-- TABLE: permissions
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `permissions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(150) NOT NULL,
+  `description` text,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deletedAt` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ------------------------------------------------------------
+-- TABLE: role_permissions
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `role_permissions` (
+  `role_id` int NOT NULL,
+  `permission_id` int NOT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`role_id`, `permission_id`),
+  CONSTRAINT `role_permissions_ibfk_1`
+    FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `role_permissions_ibfk_2`
+    FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ------------------------------------------------------------
 -- TABLE: user_roles
 --  - branch_id index (para filtrar rápido)
 --  - (no pongo deletedAt aquí para no complicar PK compuesta)
@@ -306,6 +335,22 @@ CREATE TABLE IF NOT EXISTS `folio_histories` (
     FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ============================================================
+-- TABLE: commissions
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `commissions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `folioId` int NOT NULL,
+  `folioNumber` varchar(255) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `appliedToCustomer` tinyint(1) NOT NULL DEFAULT 0,
+  `roundedAmount` decimal(10,2) DEFAULT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_commissions_folio` (`folioId`),
+  CONSTRAINT `commissions_ibfk_1` FOREIGN KEY (`folioId`) REFERENCES `folios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
 -- Movimientos de Personal (opcional recomendado)
@@ -398,14 +443,10 @@ ON DUPLICATE KEY UPDATE `active`=VALUES(`active`);
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `is_active`, `status`, `ownerId`, `createdAt`, `updatedAt`)
 VALUES
 (3, 'Mario Admin', 'admin@gmail.com',
- '$2a$10$vI8NoizvNoL5Xh36E6H2G.A/fLw/8q6Gv6Vp.E6N/F7jLhNl.O6G6',
+ '$2b$10$M7h101FeHPqRhmcOL.IWsOmj.htUsjn3EgwQRj4anxA.DLmkTBLZ.', 
  1, 'active', 1, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
-  `username`=VALUES(`username`),
   `password`=VALUES(`password`),
-  `is_active`=VALUES(`is_active`),
-  `status`=VALUES(`status`),
-  `ownerId`=VALUES(`ownerId`),
   `updatedAt`=NOW();
 
 -- Asignar rol admin a user_id=3 sin duplicar ni romper FK

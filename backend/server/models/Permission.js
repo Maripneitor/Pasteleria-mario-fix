@@ -3,7 +3,7 @@ const { sequelize } = require('../config/database');
 
 const Permission = sequelize.define('Permission', {
     id: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
     },
@@ -19,8 +19,7 @@ const Permission = sequelize.define('Permission', {
 }, {
     tableName: 'permissions',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: false // Only created_at in SQL schema
+    paranoid: true
 });
 
 module.exports = Permission;

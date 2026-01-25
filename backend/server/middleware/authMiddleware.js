@@ -145,6 +145,12 @@ const checkPermission = (permissionCode) => {
       });
 
       const hasAccess = validRoles.some(ur => {
+        // Validation for orphan records
+        if (!ur.Role) {
+          console.warn(`⚠️ ALERTA DE INTEGRIDAD: UserRole encontrado sin Role asociado para usuario ${req.user.id}`);
+          return false;
+        }
+
         // If Role is Global, it grants access everywhere
         if (ur.Role.scope === 'Global') return true;
         // If Role is Branch, it must match the requested tenant

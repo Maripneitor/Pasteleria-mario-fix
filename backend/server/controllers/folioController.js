@@ -48,7 +48,7 @@ exports.createFolio = async (req, res) => {
 
     try {
         const userRole = req.user?.role || '';
-        const isPrivileged = ['developer', 'admin', 'owner'].includes(userRole); // Roles capaces de crear en otras sucursales
+        const isPrivileged = ['developer', 'admin', 'owner', 'Administrador', 'Dueño'].includes(userRole);
 
         let tenantBranchId = req.tenant ? req.tenant.branchId : null;
 
@@ -57,7 +57,7 @@ exports.createFolio = async (req, res) => {
             tenantBranchId = req.body.branchId;
         }
 
-        if (!tenantBranchId) throw new Error('Contexto de sucursal no definido');
+        if (!tenantBranchId && !isPrivileged) throw new Error('Contexto de sucursal no definido');
 
         const {
             clientName, clientPhone, clientPhone2, total, advancePayment, deliveryDate,
@@ -70,7 +70,11 @@ exports.createFolio = async (req, res) => {
         // DEBUG: Loguear payload completo para detectar errores de validación
         console.log(`📦 payload crear folio (Raw Body):`, JSON.stringify(req.body, null, 2));
 
-        const requiredFields = ['clientName', 'clientPhone', 'deliveryDate', 'total', 'advancePayment', 'folioType', 'persons', 'shape', 'designDescription'];
+        const requiredFields = ['deliveryDate', 'total', 'advancePayment', 'folioType', 'persons', 'designDescription'];
+        // Si NO hay clientId, nombre y teléfono son obligatorios
+        if (!req.body.clientId) {
+            requiredFields.push('clientName', 'clientPhone');
+        }
         const missingFields = requiredFields.filter(field => !req.body[field] && req.body[field] !== 0);
 
         if (missingFields.length > 0) {
@@ -88,21 +92,26 @@ exports.createFolio = async (req, res) => {
 
         // Buscar o crear cliente SCOPED por sucursal
         // IMPORTANTE: Un mismo teléfono puede existir en diferentes sucursales como clientes distintos
-        const [client, created] = await Client.findOrCreate({
-            where: {
-                phone: clientPhone,
-                branchId: tenantBranchId // <--- Scope
-            },
-            defaults: {
-                name: clientName,
-                phone2: clientPhone2 || null,
-                branchId: tenantBranchId // Crear en esta branch
-            },
-            transaction: t
-        });
+        // Buscar client existente si se provee ID
+        let client;
+        let created = false;
 
-        if (!created && client.phone2 !== (clientPhone2 || null)) {
-            await client.update({ phone2: clientPhone2 || null }, { transaction: t });
+        if (folioData.clientId) {
+            client = await Client.findByPk(folioData.clientId, { transaction: t });
+            if (!client) throw new Error('Cliente no encontrado');
+        } else {
+            [client, created] = await Client.findOrCreate({
+                where: {
+                    phone: clientPhone,
+                    branchId: tenantBranchId // <--- Scope
+                },
+                defaults: {
+                    name: clientName,
+                    branchId: tenantBranchId // Crear en esta branch
+                },
+                transaction: t
+            });
+            // (Phone2 update removed)
         }
 
         // Generar número de folio
@@ -231,6 +240,16 @@ exports.createFolio = async (req, res) => {
             roundedAmount: (addCommissionToCustomer === 'true' || addCommissionToCustomer === true) ? roundedCommissionAmount.toFixed(2) : null
         }, { transaction: t });
 
+        // --- AUDIT LOG (CREATE) ---
+        await FolioHistory.create({
+            folioId: newFolio.id,
+            userId: req.user?.id || null,
+            branchId: tenantBranchId,
+            action: 'CREATE',
+            newData: newFolio.toJSON() // Snapshot of created data
+        }, { transaction: t });
+        // -------------------------
+
         await t.commit();
         console.log(`✅ Folio ${newFolio.folioNumber} creado exitosamente en Branch ${tenantBranchId}.`);
         res.status(201).json(newFolio);
@@ -254,7 +273,7 @@ exports.getAllFolios = async (req, res) => {
         const { q, status } = req.query;
         // Blindaje: Scope por Tenant obligatorio (EXCEPTO para Admin/Developer)
         const userRole = req.user?.role || ''; // Asumiendo que el middleware de auth populan el rol
-        const isPrivileged = ['developer', 'admin', 'owner'].includes(userRole); // Owner también debería ver todo su negocio? O solo su branch? El prompt dice Admin.
+        const isPrivileged = ['developer', 'admin', 'owner', 'Administrador', 'Dueño'].includes(userRole);
 
         const tenantBranchId = req.tenant ? req.tenant.branchId : null;
 
@@ -283,8 +302,7 @@ exports.getAllFolios = async (req, res) => {
                     [Op.or]: [
                         { folioNumber: { [Op.like]: searchTerm } },
                         { '$client.name$': { [Op.like]: searchTerm } },
-                        { '$client.phone$': { [Op.like]: searchTerm } },
-                        { '$client.phone2$': { [Op.like]: searchTerm } }
+                        { '$client.phone$': { [Op.like]: searchTerm } }
                     ]
                 }
             ];
@@ -301,7 +319,7 @@ exports.getAllFolios = async (req, res) => {
         const folios = await Folio.findAll({
             where: whereClause,
             include: [
-                { model: Client, as: 'client', attributes: ['name', 'phone', 'phone2'], required: false },
+                { model: Client, as: 'client', attributes: ['name', 'phone'], required: false },
                 { model: User, as: 'responsibleUser', attributes: ['username'], required: false }
             ],
             order: status === 'Pendiente' ? [['createdAt', 'DESC']] : [['deliveryDate', 'ASC'], ['deliveryTime', 'ASC']]
@@ -321,22 +339,26 @@ exports.getFolioById = async (req, res) => {
     try {
         const folioId = req.params.id;
         const tenantBranchId = req.tenant ? req.tenant.branchId : null;
+        const userRole = req.user?.role || '';
+        const isPrivileged = ['developer', 'admin', 'owner', 'Administrador', 'Dueño'].includes(userRole);
 
         if (isNaN(folioId)) {
             return res.status(400).json({ message: 'ID de folio inválido.' });
         }
-        if (!tenantBranchId) {
+        if (!tenantBranchId && !isPrivileged) {
             return res.status(400).json({ message: 'Error de contexto de sucursal.' });
+        }
+
+        let whereClause = { id: folioId };
+        if (!isPrivileged) {
+            whereClause.branchId = tenantBranchId;
         }
 
         // Usamos findOne en lugar de findByPk para poder aplicar el filtro de sucursal
         const folio = await Folio.findOne({
-            where: {
-                id: folioId,
-                branchId: tenantBranchId // <--- SCOPE
-            },
+            where: whereClause,
             include: [
-                { model: Client, as: 'client', attributes: ['name', 'phone', 'phone2'], required: false },
+                { model: Client, as: 'client', attributes: ['name', 'phone'], required: false },
                 { model: User, as: 'responsibleUser', attributes: ['username'], required: false },
                 { model: Commission, as: 'commission', required: false },
                 {
@@ -391,7 +413,7 @@ exports.updateFolio = async (req, res) => {
         if (folio.clientId) {
             const client = await Client.findByPk(folio.clientId, { transaction: t });
             if (client) {
-                await client.update({ name: clientName, phone: clientPhone, phone2: clientPhone2 || null }, { transaction: t });
+                await client.update({ name: clientName, phone: clientPhone }, { transaction: t });
             } else {
                 console.warn(`Cliente con ID ${folio.clientId} no encontrado para el folio ${folio.folioNumber} durante la actualización.`);
                 // Considerar si esto debe ser un error o solo una advertencia
@@ -1201,5 +1223,24 @@ exports.updateFolioStatus = async (req, res) => {
     } catch (error) {
         console.error(`Error updateFolioStatus ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error al actualizar estado', error: error.message });
+    }
+};
+
+// --- OBTENER HISTORIAL DE FOLIO ---
+exports.getFolioHistory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const history = await FolioHistory.findAll({
+            where: { folioId: id },
+            include: [{ model: User, as: 'user', attributes: ['username'] }], // Ensure User association alias is correct 'user' or 'responsibleUser' or implicit. FolioHistory belongsTo User. Alias in model file?
+            // Checking models/FolioHistory.js is safer but I will assume default or 'user' if not aliased.
+            // Let's check model definition briefly or try generic include.
+            // initsql: FOREIGN KEY (`userId`) REFERENCES `users`
+            order: [['createdAt', 'DESC']]
+        });
+        res.json(history);
+    } catch (error) {
+        console.error("Error getting history:", error);
+        res.status(500).json({ message: "Error al obtener historial" });
     }
 };

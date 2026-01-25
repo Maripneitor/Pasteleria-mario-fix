@@ -196,7 +196,11 @@ exports.login = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
 
+    console.log(`🔍 DEBUG LOGIN: Email: ${email}`);
+    console.log(`🔍 DEBUG LOGIN: Stored Hash: ${user.password}`);
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log(`🔍 DEBUG LOGIN: Password Match: ${isMatch}`);
+
     if (!isMatch) return res.status(401).json({ message: 'Contraseña incorrecta.' });
 
     // 3. EXTRAER EL NOMBRE DEL ROL (Si no tiene, default a 'Empleado')

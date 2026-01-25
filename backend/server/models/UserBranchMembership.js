@@ -8,7 +8,7 @@ const UserBranchMembership = sequelize.define('UserBranchMembership', {
         autoIncrement: true
     },
     userId: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.INTEGER,
         allowNull: false,
         field: 'user_id'
     },

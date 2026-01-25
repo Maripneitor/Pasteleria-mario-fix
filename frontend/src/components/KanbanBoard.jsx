@@ -26,7 +26,7 @@ const KanbanBoard = () => {
 
     const fetchFolios = async () => {
         try {
-            const response = await folioService.getAllFolios({ status: '' });
+            const response = await folioService.getAllFolios({ status: undefined });
             const foliosData = Array.isArray(response)
                 ? response
                 : (response?.data && Array.isArray(response.data) ? response.data : []);
