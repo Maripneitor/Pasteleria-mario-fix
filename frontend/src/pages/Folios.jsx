@@ -45,6 +45,11 @@ const Folios = () => {
     const fetchFolios = async () => {
         try {
             const response = await api.get('/folios');
+            // Validate response data structure before processing
+            if (!response.data) {
+                throw new Error('No data received from server');
+            }
+
             const data = sanitizeFolioList(response.data);
 
             // Filter/Sort logic: Prioritize urgent orders (deliveryDate = today)
@@ -59,9 +64,10 @@ const Folios = () => {
             });
 
             setFolios(sortedData);
-            setLoading(false);
         } catch (err) {
-            setError('Error al cargar los folios.');
+            console.error("Error loading folios:", err);
+            setError('Error al cargar los folios: ' + (err.message || 'Error desconocido'));
+        } finally {
             setLoading(false);
         }
     };

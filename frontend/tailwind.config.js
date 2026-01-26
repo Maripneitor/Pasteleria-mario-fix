@@ -4,30 +4,45 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
-    darkMode: 'class',
+    darkMode: 'class', // Importante para que funcione .dark
     theme: {
         extend: {
             colors: {
-                bakery: {
-                    milk: '#fdfcf0',   // Crema suave (Legacy support)
-                    50: '#fef2f2',
-                    100: '#fee2e2',
-                    700: '#b91c1c',
-                    800: '#991b1b',
-                    900: '#7f1d1d',
-                    950: '#1a0d0d',    // Fondo oscuro profundo
+                border: "var(--border)",
+                input: "var(--input)",
+                ring: "var(--ring)",
+                background: "var(--bg-surface)",
+                foreground: "var(--text-primary)",
 
-                    // New "La Fiesta" Design Tokens
-                    primary: '#E31C79', // Rojo Cereza Vibrante
-                    secondary: '#FDFCF0', // Crema / Vainilla
-                    accent: '#3E2723', // Chocolate Profundo
-                    surface: '#FFFFFF', // Blanco Puro
-                    muted: '#F5F5F5', // Gris muy claro para fondos secundarios
+                brand: {
+                    primary: "var(--brand-primary)", // Premium: Cherry Red
+                    secondary: "var(--brand-secondary)", // Premium: Dark Chocolate
+                    accent: "var(--brand-accent)", // Premium: Gold
+                },
+                surface: {
+                    DEFAULT: "var(--bg-surface)",
+                    card: "var(--bg-card)",
+                    muted: "var(--bg-muted)",
+                },
+                text: {
+                    primary: "var(--text-primary)",
+                    secondary: "var(--text-secondary)",
                 },
             },
-            fontFamily: {
-                sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-                display: ['Poppins', 'Inter', 'sans-serif'], // For headers if needed
+            // Animaciones existentes se mantienen aquí...
+            animation: {
+                'slide-up': 'slideUp 0.3s ease-out',
+                'fade-in': 'fadeIn 0.2s ease-out',
+            },
+            keyframes: {
+                slideUp: {
+                    '0%': { transform: 'translateY(100%)', opacity: '0' },
+                    '100%': { transform: 'translateY(0)', opacity: '1' },
+                },
+                fadeIn: {
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' },
+                },
             }
         },
     },

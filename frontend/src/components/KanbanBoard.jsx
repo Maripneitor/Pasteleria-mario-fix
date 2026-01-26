@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import KanbanColumn from './KanbanColumn';
 import InventoryWatch from './production/InventoryWatch';
-import folioService from '../services/folioService';
-import { motion, AnimatePresence } from 'framer-motion';
+// import folioService from '../services/folioService'; // Deprecated for local Sync
+import { useToast } from '../context/ToastSystem';
 import { Loader2 } from 'lucide-react';
 import EmptyState from './EmptyState';
-import { sanitizeFolioList } from '../utils/folioSanitizer';
+import GlassCard from './ui/GlassCard';
+import { useOrderSync } from '../context/OrderSyncContext'; // Import Sync Context
 
 const COLUMNS = [
     { id: 'Pendiente', title: 'Pendiente', color: 'bg-gray-500' },
@@ -15,59 +16,25 @@ const COLUMNS = [
 ];
 
 const KanbanBoard = () => {
-    const [folios, setFolios] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [notification, setNotification] = useState(null);
+    // Consume Global Sync Context
+    const { orders: folios, updateOrderStatus } = useOrderSync();
 
-    useEffect(() => {
-        fetchFolios();
-    }, []);
+    // const [folios, setFolios] = useState([]); // Managed by Context
+    const [loading, setLoading] = useState(false); // Data is instant from context
+    // const [error, setError] = useState(null);
+    // const { showSuccess, showError, showInfo } = useToast(); 
 
-    const fetchFolios = async () => {
-        try {
-            const response = await folioService.getAllFolios({ status: undefined });
-            const foliosData = Array.isArray(response)
-                ? response
-                : (response?.data && Array.isArray(response.data) ? response.data : []);
+    // Legacy fetch removed in favor of SyncContext
 
-            setFolios(sanitizeFolioList(foliosData));
-            setLoading(false);
-        } catch (err) {
-            console.error("Error loading Kanban board:", err);
-            setError('Error al cargar el tablero de producción.');
-            setLoading(false);
-        }
-    };
+    /* 
+       We simplified the logic: 
+       KanbanBoard now just renders `folios` from context.
+       `updateLocalStatus` and `commitStatusUpdate` are replaced by `updateOrderStatus` from context.
+    */
 
-    const updateLocalStatus = (folioId, newStatus) => {
-        const originalFolios = [...folios];
-        const folioIndex = folios.findIndex(f => (f.id || f._id || f.folioNumber).toString() === folioId.toString());
-
-        if (folioIndex === -1) return;
-        const currentStatus = folios[folioIndex].status;
-        if (currentStatus === newStatus) return;
-
-        const updatedFolios = [...folios];
-        updatedFolios[folioIndex] = { ...updatedFolios[folioIndex], status: newStatus };
-        setFolios(updatedFolios);
-
-        return originalFolios; // Return for rollback
-    };
-
-    const commitStatusUpdate = async (folioId, newStatus, originalFolios) => {
-        try {
-            await folioService.updateFolioStatus(folioId, { status: newStatus });
-            showNotification(`Folio movido a ${newStatus}`, 'success');
-        } catch (err) {
-            setFolios(originalFolios);
-            showNotification('Error al actualizar el estado', 'error');
-        }
-    };
-
-    const handleDrop = async (folioId, newStatus) => {
-        const original = updateLocalStatus(folioId, newStatus);
-        if (original) commitStatusUpdate(folioId, newStatus, original);
+    const handleDrop = (folioId, newStatus) => {
+        // handle Type coercion if needed
+        updateOrderStatus(Number(folioId), newStatus);
     };
 
     const handleNextStatus = (folio) => {
@@ -76,18 +43,14 @@ const KanbanBoard = () => {
 
         if (currentIndex !== -1 && currentIndex < COLUMNS.length - 1) {
             const nextStatus = COLUMNS[currentIndex + 1].id;
-            const folioId = folio.id || folio._id || folio.folioNumber;
-            const original = updateLocalStatus(folioId, nextStatus);
-            if (original) commitStatusUpdate(folioId, nextStatus, original);
-        } else {
-            showNotification('Este pedido ya está en la etapa final', 'info');
+            updateOrderStatus(folio.id, nextStatus);
         }
     };
 
-    const showNotification = (message, type) => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 3000);
-    };
+    // ... rest of component ...
+
+
+
 
     // Filter active folios for inventory calculation
     const activeForInventory = folios.filter(f => f.status === 'Pendiente' || f.status === 'En Producción');
@@ -104,19 +67,7 @@ const KanbanBoard = () => {
 
     return (
         <div className="h-full flex flex-col relative space-y-4">
-            {/* Toast Notification */}
-            <AnimatePresence>
-                {notification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20, x: '-50%' }}
-                        animate={{ opacity: 1, y: 20, x: '-50%' }}
-                        exit={{ opacity: 0, y: -20, x: '-50%' }}
-                        className={`fixed top-4 left-1/2 z-50 px-6 py-3 rounded-full shadow-lg font-medium text-white ${notification.type === 'success' ? 'bg-green-600' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-600'}`}
-                    >
-                        {notification.message}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
 
             {/* Inventory Projection */}
             <InventoryWatch activeFolios={activeForInventory} />
@@ -129,7 +80,7 @@ const KanbanBoard = () => {
                     />
                 </div>
             ) : (
-                <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-50 dark:bg-bakery-950 transition-colors rounded-xl border border-gray-200 dark:border-slate-800">
+                <GlassCard className="flex-1 overflow-x-auto overflow-y-hidden border border-border p-0">
                     <div className="flex h-full gap-4 p-4 min-w-max pb-6">
                         {COLUMNS.map(col => (
                             <KanbanColumn
@@ -143,7 +94,7 @@ const KanbanBoard = () => {
                             />
                         ))}
                     </div>
-                </div>
+                </GlassCard>
             )}
         </div>
     );

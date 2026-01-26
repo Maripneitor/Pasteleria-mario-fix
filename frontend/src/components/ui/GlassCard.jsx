@@ -1,28 +1,21 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { cn } from '../../utils/cn';
 
-const GlassCard = ({ children, className = '', hoverEffect = true, onClick }) => {
+const GlassCard = ({ children, className, ...props }) => {
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={hoverEffect ? { y: -4, shadow: "0 10px 30px -10px rgba(0,0,0,0.1)" } : {}}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className={`
-                bg-white/70 dark:bg-slate-800/60 
-                backdrop-blur-md 
-                border border-white/20 dark:border-white/10 
-                shadow-lg 
-                rounded-2xl 
-                p-6 
-                ${onClick ? 'cursor-pointer' : ''} 
-                ${className}
-            `}
-            onClick={onClick}
+        <div
+            className={cn(
+                "relative overflow-hidden rounded-xl border border-white/20 shadow-xl",
+                // Modo claro: Fondo blanco con transparencia y blur
+                "bg-surface/70 backdrop-blur-md",
+                // Modo oscuro: Slate 800 semi-transparente con borde sutil para profundidad
+                "dark:bg-surface-card/60 dark:border-white/5 dark:shadow-md",
+                className
+            )}
+            {...props}
         >
             {children}
-        </motion.div>
+        </div>
     );
 };
 

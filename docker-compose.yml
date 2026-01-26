@@ -2,17 +2,15 @@ services:
   db:
     image: mysql:8.0
     container_name: mysql_pasteleria
-    # Soluciona problemas de autenticación en algunas versiones de clientes MySQL
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
       MYSQL_DATABASE: pasteleria_db
       MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - "3306:3306"
+      - "3306:3306"  # Dejamos 3306 si no tienes MySQL local
     volumes:
       - db_data:/var/lib/mysql
-      # Montamos el script SQL inicial si es necesario para poblar la DB en el primer arranque
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   backend:
@@ -21,20 +19,22 @@ services:
     depends_on:
       - db
     ports:
-      - "3000:3000"
-    # Cargamos .env si existe para secretos (JWT, EMAIL, etc)
+      - "5001:3000"  # Cambiado: Backend en 5001 (externo) -> 3000 (interno)
     env_file:
       - ./backend/.env
-    # Sobrescribimos variables de DB para conectar entre contenedores
     environment:
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=root_password
       - DB_NAME=pasteleria_db
       - DB_PORT=3306
+      - PORT=3000
     volumes:
-      # Persistencia de uploads
+      - ./backend:/app  # ¡IMPORTANTE! Para ver cambios en tiempo real
+      - /app/node_modules
       - backend_uploads:/app/uploads
+    # Si tu backend usa nodemon para desarrollo
+    command: npm run dev
 
   frontend:
     build: ./frontend
@@ -42,7 +42,9 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "3001:80"  # Cambiado: Frontend en 3001 (externo) -> 80 (interno Nginx)
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001/api  # Actualizado al nuevo puerto
 
 volumes:
   db_data:

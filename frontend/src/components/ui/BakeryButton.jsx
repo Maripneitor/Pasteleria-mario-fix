@@ -1,48 +1,48 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
-
-const variants = {
-    solid: "bg-bakery-primary text-white hover:bg-bakery-800 shadow-md border-transparent",
-    outline: "bg-transparent border-2 border-bakery-primary text-bakery-primary hover:bg-bakery-50",
-    ghost: "bg-transparent text-bakery-accent hover:bg-bakery-100/50 hover:text-bakery-primary border-transparent"
-};
-
-const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-5 py-2.5 text-base",
-    lg: "px-6 py-3 text-lg"
-};
+import { cn } from '../../utils/cn';
 
 const BakeryButton = ({
     children,
-    onClick,
     variant = 'solid',
     size = 'md',
+    className,
+    isLoading,
     icon: Icon,
-    isLoading = false,
-    className = '',
-    disabled = false,
-    type = 'button'
+    disabled,
+    ...props
 }) => {
+    const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed";
+
+    const variants = {
+        solid: "bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/20",
+        outline: "border-2 border-primary text-primary hover:bg-primary/10",
+        ghost: "text-text-primary hover:bg-surface-muted hover:text-primary",
+        danger: "bg-status-danger text-white hover:brightness-110"
+    };
+
+    const sizes = {
+        sm: "h-8 px-3 text-sm",
+        md: "h-10 px-4 text-sm",
+        lg: "h-12 px-6 text-base"
+    };
+
     return (
         <motion.button
-            whileHover={{ y: -2 }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`
-                relative inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors duration-200 border
-                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:y-0
-                ${variants[variant]} 
-                ${sizes[size]} 
-                ${className}
-            `}
-            onClick={disabled || isLoading ? undefined : onClick}
+            className={cn(baseStyles, variants[variant], sizes[size], className)}
             disabled={disabled || isLoading}
-            type={type}
+            {...props}
+            type={props.type || 'button'}
         >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {!isLoading && Icon && <Icon className="w-5 h-5" />}
-            <span>{children}</span>
+            {isLoading && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            )}
+            {!isLoading && Icon && <Icon className="mr-2 h-4 w-4" />}
+            {children}
         </motion.button>
     );
 };

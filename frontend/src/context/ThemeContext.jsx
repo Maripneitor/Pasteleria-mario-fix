@@ -12,26 +12,19 @@ export const ThemeProvider = ({ children }) => {
     });
 
     useEffect(() => {
-        // Initial setup
         const root = window.document.documentElement;
+        // Ensure accurate class mapping
         if (theme === 'dark') {
             root.classList.add('dark');
         } else {
             root.classList.remove('dark');
         }
-    }, []); // Run once on mount to sync with initial state
+        // Persist immediately on change
+        localStorage.setItem('theme', theme);
+    }, [theme]);
 
     const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-
-        const root = window.document.documentElement;
-        if (newTheme === 'dark') {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-        }
+        setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
     };
 
     return (

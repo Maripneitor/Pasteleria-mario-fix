@@ -9,9 +9,9 @@ const DesktopSidebar = ({ onLogout }) => {
     const isActive = (path) => location.pathname === path;
 
     return (
-        <div className="hidden md:flex flex-col items-center py-8 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800 h-full w-20 shadow-sm fixed top-0 left-0 z-50 transition-colors duration-300">
-            {/* Brand Logo - Simplified */}
-            <div className="mb-10 w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold shadow-blue-200 dark:shadow-none shadow-lg">
+        <div className="hidden md:flex flex-col items-center py-8 bg-surface dark:bg-surface-card border-r border-border dark:border-white/5 h-full w-20 shadow-sm dark:shadow-xl fixed top-0 left-0 z-50 transition-colors duration-300">
+            {/* Brand Logo - Semantic */}
+            <div className="mb-10 w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold shadow-primary/30 shadow-lg">
                 P
             </div>
 
@@ -83,16 +83,16 @@ const NavIcon = ({ Icon, active, onClick, danger, tooltip }) => (
         <button
             onClick={onClick}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${active
-                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 shadow-inner'
+                ? 'bg-primary/10 text-primary shadow-inner'
                 : danger
-                    ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                    ? 'text-text-secondary hover:text-status-danger hover:bg-status-danger/10'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-muted'
                 }`}
         >
             <Icon size={22} strokeWidth={active ? 2.5 : 2} />
         </button>
         {/* Tooltip */}
-        <span className="absolute left-full ml-4 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+        <span className="absolute left-full ml-4 px-2 py-1 bg-surface-muted text-text-primary border border-border text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
             {tooltip}
         </span>
     </div>

@@ -1,56 +1,73 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-white text-gray-900 transition-colors duration-300;
+  :root {
+    /* Brand Colors - Premium Palette */
+    --brand-primary: #BA0C2F;
+    /* Cherry Red (Pantone 200 C) */
+    --brand-secondary: #3E2723;
+    /* Dark Chocolate */
+    --brand-accent: #D4AF37;
+    /* Gold */
+
+    /* Surface - Light Mode (Slate Scale) */
+    --bg-surface: #ffffff;
+    /* White */
+    --bg-card: #f8fafc;
+    /* Slate 50 */
+    --bg-muted: #f1f5f9;
+    /* Slate 100 */
+
+    /* Text - Light Mode */
+    --text-primary: #0f172a;
+    /* Slate 900 */
+    --text-secondary: #475569;
+    /* Slate 600 - slightly darker for better contrast */
+
+    /* Borders */
+    --border: #e2e8f0;
+    /* Slate 200 */
+    --input: #cbd5e1;
+    /* Slate 300 - slightly darker for visibility */
+    --ring: #BA0C2F;
+    /* Matching Primary */
   }
 
-  .dark body {
-    /* Aquí ya no fallará porque bakery-950 y bakery-milk están en el config */
-    @apply bg-bakery-950 text-bakery-milk;
+  .dark {
+    /* Brand Colors (Adjusted for Dark Mode) */
+    --brand-primary: #EF4444;
+    /* Red 500 - Lighter for dark backgrounds */
+    --brand-secondary: #5D4037;
+    /* Chocolate - Lighter shade (Brown 700) */
+    --brand-accent: #F59E0B;
+    /* Amber 500 - Gold equivalent for dark mode */
+
+    /* Surface - Dark Mode (Slate Palette) */
+    --bg-surface: #0f172a;
+    /* Slate 900 */
+    --bg-card: #1e293b;
+    /* Slate 800 */
+    --bg-muted: #334155;
+    /* Slate 700 */
+
+    /* Text - Dark Mode */
+    --text-primary: #f8fafc;
+    /* Slate 50 */
+    --text-secondary: #94a3b8;
+    /* Slate 400 */
+
+    /* Borders */
+    --border: #334155;
+    /* Slate 700 */
+    --input: #475569;
+    /* Slate 600 */
+    --ring: #EF4444;
+    /* Matching Dark Primary */
   }
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  @apply font-sans font-semibold tracking-tight;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
-}
-
-html.dark ::-webkit-scrollbar-thumb {
-  @apply bg-slate-700 hover:bg-slate-600;
-}
-
-/* Dark Mode Table Overrides - Task 3 */
-.dark tr { 
-  background-color: #1f2937; /* Gray-800 */
-  color: #f9fafb; 
-}
-.dark tr:hover { 
-  background-color: #374151; /* Gray-700 */
-}
-.dark thead {
-  background-color: #b91c1c; /* Red-700 for branding match */
-  color: white;
+body {
+  @apply bg-surface-muted text-text-primary transition-colors duration-300;
 }

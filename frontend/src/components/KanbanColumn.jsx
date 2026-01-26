@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ProductionCard from './kanban/ProductionCard';
 
 const KanbanColumn = ({ status, title, folios = [], color, onDrop, onNextStatus }) => {
@@ -39,23 +39,31 @@ const KanbanColumn = ({ status, title, folios = [], color, onDrop, onNextStatus 
 
             {/* Cards Scroll Area */}
             <div className="flex-1 p-3 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-3 bg-gray-50/50 dark:bg-slate-900/50">
-
-                {filteredFolios.map((folio) => (
-                    <div
-                        key={folio.id || folio._id || folio.folioNumber}
-                        onDragStart={(e) => {
-                            e.dataTransfer.setData("folioId", folio.id || folio._id || folio.folioNumber);
-                        }}
-                        draggable
-                        className="cursor-move" // Ensure visual clue
-                    >
-                        <ProductionCard
-                            folio={folio}
-                            accentColor={color.replace('bg-opacity-10', '')}
-                            onNextStep={onNextStatus}
-                        />
-                    </div>
-                ))}
+                <AnimatePresence mode="popLayout">
+                    {filteredFolios.map((folio) => (
+                        <motion.div
+                            key={folio.id || folio._id || folio.folioNumber}
+                            layout
+                            layoutId={folio.id || folio._id || folio.folioNumber}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ duration: 0.2 }}
+                            onDragStart={(e) => {
+                                e.dataTransfer.setData("folioId", folio.id || folio._id || folio.folioNumber);
+                            }}
+                            draggable
+                            whileDrag={{ scale: 1.05, rotate: 2, cursor: "grabbing" }}
+                            className="cursor-move touch-none"
+                        >
+                            <ProductionCard
+                                folio={folio}
+                                accentColor={color.replace('bg-opacity-10', '')}
+                                onNextStep={onNextStatus}
+                            />
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
 
                 {filteredFolios.length === 0 && (
                     <div className="h-32 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl flex items-center justify-center text-gray-400 text-sm italic">

@@ -1,84 +1,58 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { cn } from '../../utils/cn';
 
-const AnimatedInput = ({
-    label,
-    id,
-    type = 'text',
-    error,
-    register,
-    validation = {},
-    className = '',
-    placeholder = ' ' // Required for :placeholder-shown trick if using CSS key, but we use motion state
-}) => {
-    const [isFocused, setIsFocused] = useState(false);
-    const [hasValue, setHasValue] = useState(false);
+const AnimatedInput = ({ label, className, error, id, register, validation, type = 'text', ...props }) => {
+    // Check if type is textarea to render conditionally
+    const isTextarea = type === 'textarea';
 
-    // Handler to combine external register (react-hook-form) with local state
-    const handleBlur = (e) => {
-        setIsFocused(false);
-        setHasValue(e.target.value.length > 0);
-        if (register && register(id).onBlur) register(id).onBlur(e);
-    };
-
-    const handleFocus = (e) => {
-        setIsFocused(true);
-        if (register && register(id).onFocus) register(id).onFocus(e);
-    };
-
-    // Fallback if passing simple onChange
-    const handleChange = (e) => {
-        setHasValue(e.target.value.length > 0);
-        if (register && register(id).onChange) register(id).onChange(e);
-    };
+    // Extract react-hook-form props if register is provided
+    const registerProps = register && id ? register(id, validation) : {};
 
     return (
-        <div className={`relative mb-4 ${className}`}>
-            <div className="relative">
+        <div className="relative group mb-4">
+            {isTextarea ? (
+                <textarea
+                    id={id}
+                    className={cn(
+                        "peer w-full rounded-lg border-2 bg-surface/50 px-4 py-3 text-text-primary outline-none transition-all placeholder-shown:border-border h-32 resize-none",
+                        "focus:border-primary focus:ring-4 focus:ring-primary/10",
+                        error ? "border-status-danger focus:border-status-danger focus:ring-status-danger/10" : "border-border",
+                        "disabled:bg-surface-muted disabled:cursor-not-allowed",
+                        className
+                    )}
+                    placeholder=" "
+                    {...registerProps}
+                    {...props}
+                />
+            ) : (
                 <input
                     id={id}
                     type={type}
-                    className={`
-                        peer w-full px-4 py-3 
-                        bg-white/50 dark:bg-slate-800/50 
-                        border-2 rounded-xl outline-none transition-colors duration-200
-                        ${error
-                            ? 'border-red-400 focus:border-red-500 text-red-900 placeholder-transparent'
-                            : 'border-slate-200 dark:border-slate-700 focus:border-bakery-primary text-slate-800 dark:text-slate-100'
-                        }
-                    `}
-                    {...(register ? register(id, validation) : {})}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                    placeholder={placeholder} // Keeps space for layout but hidden by logic usually
+                    className={cn(
+                        "peer w-full rounded-lg border-2 bg-surface/50 px-4 py-3 text-text-primary outline-none transition-all placeholder-shown:border-border",
+                        "focus:border-primary focus:ring-4 focus:ring-primary/10",
+                        error ? "border-status-danger focus:border-status-danger focus:ring-status-danger/10" : "border-border",
+                        "disabled:bg-surface-muted disabled:cursor-not-allowed",
+                        className
+                    )}
+                    placeholder=" "
+                    {...registerProps}
+                    {...props}
                 />
-                <motion.label
-                    htmlFor={id}
-                    initial={false}
-                    animate={{
-                        y: isFocused || hasValue ? -24 : 12,
-                        x: isFocused || hasValue ? 0 : 12,
-                        scale: isFocused || hasValue ? 0.85 : 1,
-                        color: error ? '#f87171' : isFocused ? '#E31C79' : '#94a3b8'
-                    }}
-                    transition={{ duration: 0.2 }}
-                    className={`
-                        absolute left-0 top-0 pointer-events-none origin-left font-medium
-                    `}
-                >
-                    {label}
-                </motion.label>
-            </div>
-            {error && (
-                <motion.span
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-xs text-red-500 mt-1 ml-1"
-                >
-                    {error.message}
-                </motion.span>
             )}
+
+            <label
+                htmlFor={id}
+                className={cn(
+                    "pointer-events-none absolute left-4 top-3 origin-[0] -translate-y-6 scale-75 transform bg-surface px-1 text-sm duration-200",
+                    error ? "text-status-danger" : "text-text-muted",
+                    "peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100",
+                    "peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-primary",
+                    "peer-disabled:text-text-muted/50"
+                )}>
+                {label}
+            </label>
+            {error && <span className="mt-1 text-xs text-status-danger">{error.message || error}</span>}
         </div>
     );
 };

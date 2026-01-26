@@ -38,9 +38,12 @@ const BranchSettings = lazy(() => import('./pages/BranchSettings')); // New Rout
 const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
 const DeveloperDashboard = lazy(() => import('./pages/DeveloperDashboard'));
 const BakeryConfig = lazy(() => import('./pages/BakeryConfig'));
-
+const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay')); // KDS
+import { OrderSyncProvider } from './context/OrderSyncContext';
 
 const queryClient = new QueryClient();
+
+// ...
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -50,6 +53,13 @@ const AnimatedRoutes = () => {
         {/* Public Routes */}
         <Route path="/login" element={<LogIn />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Independent/Full Screen Routes */}
+        <Route path="/kitchen" element={
+          <ProtectedRoute allowedRoles={[ROLES.DEVELOPER, ROLES.OWNER, ROLES.PRODUCTION, ROLES.EMPLOYEE]}>
+            <KitchenDisplay />
+          </ProtectedRoute>
+        } />
 
         {/* Protected Routes Wrapper */}
         <Route element={<DashboardLayout />}>
@@ -68,7 +78,7 @@ const AnimatedRoutes = () => {
           {/* Owner & Developer Routes */}
           <Route element={<ProtectedRoute allowedRoles={[ROLES.DEVELOPER, ROLES.OWNER]} />}>
             <Route path="/dashboard" element={<PageTransition><Dashboard /></PageTransition>} />
-            <Route path="/dashboard/owner" element={<OwnerDashboard />} />
+            <Route path="/dashboard/owner" element={<PageTransition><OwnerDashboard /></PageTransition>} />
             <Route path="/calendario" element={<PageTransition><Calendar /></PageTransition>} />
             <Route path="/estadisticas" element={<PageTransition><Statistics /></PageTransition>} />
             <Route path="/clientes" element={<PageTransition><Clients /></PageTransition>} />
@@ -82,8 +92,8 @@ const AnimatedRoutes = () => {
             <Route path="/folios" element={<PageTransition><Folios /></PageTransition>} />
             <Route path="/folio/nuevo" element={<PageTransition><NewFolio /></PageTransition>} />
             <Route path="/produccion" element={<PageTransition><KanbanBoard /></PageTransition>} />
-            <Route path="/asistente-ia" element={<AiInbox />} />
-            <Route path="/ia-sesiones/:id" element={<SessionConsole />} />
+            <Route path="/asistente-ia" element={<PageTransition><AiInbox /></PageTransition>} />
+            <Route path="/ia-sesiones/:id" element={<PageTransition><SessionConsole /></PageTransition>} />
             {/* Fallback for employee dashboard access if needed */}
           </Route>
 
@@ -98,21 +108,25 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
+
+
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
-          <SystemLogProvider>
-            <ToastProvider>
-              <GlobalErrorBoundary>
-                <Router>
-                  <DevOverlay />
-                  <Suspense fallback={<CakeLoader isLoading={true} />}>
-                    <AnimatedRoutes />
-                  </Suspense>
-                </Router>
-              </GlobalErrorBoundary>
-            </ToastProvider>
-          </SystemLogProvider>
+          <OrderSyncProvider>
+            <SystemLogProvider>
+              <ToastProvider>
+                <GlobalErrorBoundary>
+                  <Router>
+                    <DevOverlay />
+                    <Suspense fallback={<CakeLoader isLoading={true} />}>
+                      <AnimatedRoutes />
+                    </Suspense>
+                  </Router>
+                </GlobalErrorBoundary>
+              </ToastProvider>
+            </SystemLogProvider>
+          </OrderSyncProvider>
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
