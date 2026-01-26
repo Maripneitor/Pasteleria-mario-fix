@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { MENU_ITEMS } from '../../config/permissions';
 import { motion, AnimatePresence } from 'framer-motion';
+import Breadcrumbs from './Breadcrumbs';
 import {
     LayoutDashboard,
     ChefHat,
@@ -14,12 +15,10 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
-    Users,
-    Menu,
-    Moon,
-    Sun,
-    User
+    User,
+    Wifi
 } from 'lucide-react';
+import OfflineBanner from '../common/OfflineBanner';
 
 // Icon mapping based on permissions.js strings
 const ICON_MAP = {
@@ -102,7 +101,9 @@ const DashboardLayout = ({ children }) => {
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
                     {filteredNavigation.map((item) => {
-                        const isActive = location.pathname === item.path;
+                        const isActive = location.pathname === item.path ||
+                            (location.pathname.startsWith(item.path) && item.path !== '/' && item.path !== '/dashboard') ||
+                            (item.path === '/folios' && location.pathname.startsWith('/folio/'));
                         return (
                             <Link key={item.path} to={item.path}>
                                 <motion.div
@@ -208,7 +209,9 @@ const DashboardLayout = ({ children }) => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-6 overflow-y-auto w-full">
+                <main className="flex-1 p-6 overflow-y-auto w-full relative">
+                    <Breadcrumbs />
+                    <OfflineBanner />
                     {content}
                 </main>
             </motion.div>

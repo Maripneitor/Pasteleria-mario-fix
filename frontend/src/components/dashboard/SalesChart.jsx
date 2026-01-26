@@ -1,6 +1,6 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import GlassCard from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 
 const SalesChart = ({ data }) => {
     // Mock data if none provided
@@ -15,7 +15,7 @@ const SalesChart = ({ data }) => {
     ];
 
     return (
-        <GlassCard className="h-96">
+        <Card glass className="h-96 p-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-6">Tendencia de Ingresos</h3>
             <div className="h-full w-full pb-8">
                 <ResponsiveContainer width="100%" height="90%">
@@ -69,7 +69,7 @@ const SalesChart = ({ data }) => {
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
-        </GlassCard>
+        </Card>
     );
 };
 

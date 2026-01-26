@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import AnimatedInput from './AnimatedInput';
 import BakeryButton from './BakeryButton';
-import GlassCard from './GlassCard';
+import { Card } from './Card';
 
 const LoginForm = ({ onSubmit, email, setEmail, password, setPassword, loading, error }) => {
 

@@ -1,44 +1,45 @@
 import React from 'react';
+import Skeleton from './common/Skeleton';
 
 const FolioCardSkeleton = () => {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 h-full flex flex-col">
             {/* Header */}
-            <div className="flex justify-between items-start mb-4 animate-pulse">
+            <div className="flex justify-between items-start mb-4">
                 <div>
-                    <div className="h-3 w-10 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-6 w-16 bg-gray-200 rounded"></div>
+                    <Skeleton variant="text" width="40px" height="12px" className="mb-2" />
+                    <Skeleton variant="text" width="64px" height="24px" />
                 </div>
-                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                <Skeleton variant="circle" width="80px" height="24px" />
             </div>
 
             {/* Body */}
-            <div className="space-y-4 mb-4 flex-grow animate-pulse">
+            <div className="space-y-4 mb-4 flex-grow">
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 bg-gray-200 rounded-full shrink-0"></div>
+                    <Skeleton variant="circle" width="32px" height="32px" />
                     <div className="space-y-2 w-full">
-                        <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
-                        <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+                        <Skeleton variant="text" width="75%" height="16px" />
+                        <Skeleton variant="text" width="50%" height="12px" />
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="h-5 w-5 bg-gray-200 rounded shrink-0"></div>
-                    <div className="h-4 w-2/3 bg-gray-200 rounded"></div>
+                    <Skeleton variant="rect" width="20px" height="20px" />
+                    <Skeleton variant="text" width="66%" height="16px" />
                 </div>
 
-                <div className="h-20 bg-gray-200 rounded-lg w-full"></div>
+                <Skeleton variant="rect" height="80px" className="w-full rounded-lg" />
             </div>
 
             {/* Footer */}
-            <div className="pt-4 border-t border-gray-50 flex justify-between items-end mt-auto animate-pulse">
+            <div className="pt-4 border-t border-gray-50 flex justify-between items-end mt-auto">
                 <div>
-                    <div className="h-3 w-8 bg-gray-200 rounded mb-1"></div>
-                    <div className="h-6 w-16 bg-gray-200 rounded"></div>
+                    <Skeleton variant="text" width="32px" height="12px" className="mb-1" />
+                    <Skeleton variant="text" width="64px" height="24px" />
                 </div>
                 <div>
-                    <div className="h-3 w-12 bg-gray-200 rounded mb-1 ml-auto"></div>
-                    <div className="h-5 w-14 bg-gray-200 rounded ml-auto"></div>
+                    <Skeleton variant="text" width="48px" height="12px" className="mb-1 ml-auto" />
+                    <Skeleton variant="text" width="56px" height="20px" className="ml-auto" />
                 </div>
             </div>
         </div>

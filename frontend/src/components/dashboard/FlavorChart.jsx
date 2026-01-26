@@ -1,6 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import GlassCard from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 
 const FlavorChart = ({ data }) => {
     // Mock Data
@@ -28,7 +28,7 @@ const FlavorChart = ({ data }) => {
     };
 
     return (
-        <GlassCard className="h-96">
+        <Card glass className="h-96 p-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Sabores Top</h3>
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -64,7 +64,7 @@ const FlavorChart = ({ data }) => {
                     />
                 </PieChart>
             </ResponsiveContainer>
-        </GlassCard>
+        </Card>
     );
 };
 

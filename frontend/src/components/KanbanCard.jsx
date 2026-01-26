@@ -55,4 +55,4 @@ const KanbanCard = ({ folio, activeColor }) => {
     );
 };
 
-export default KanbanCard;
+export default React.memo(KanbanCard);

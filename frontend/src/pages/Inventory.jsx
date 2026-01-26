@@ -1,6 +1,8 @@
 import React from 'react';
 import { Package, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useInventory } from '../hooks/useInventory';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
 
 const Inventory = () => {
     const { data: inventory, isLoading, isError } = useInventory();
@@ -10,14 +12,14 @@ const Inventory = () => {
 
     return (
         <div className="p-6 bg-bakery-cream min-h-screen">
-            <h1 className="text-3xl font-serif font-bold text-bakery-text mb-8 flex items-center gap-3">
-                <Package className="text-bakery-accent" />
-                Inventario de Materia Prima
-            </h1>
+            <PageHeader
+                title="Inventario de Materia Prima"
+                subtitle="Monitoreo en tiempo real de insumos básicos"
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {inventory.map((item) => (
-                    <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-white hover:border-gray-200 transition-all">
+                    <Card key={item.id} className="p-6 bg-white hover:border-gray-200 transition-all">
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h3 className="font-bold text-gray-800 text-lg">{item.name}</h3>
@@ -58,7 +60,7 @@ const Inventory = () => {
                                 style={{ width: `${Math.min(100, (item.stock / (item.minLevel * 2)) * 100)}%`, zIndex: 0 }}
                             ></div>
                         </div>
-                    </div>
+                    </Card>
                 ))}
             </div>
 

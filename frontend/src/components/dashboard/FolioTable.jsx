@@ -53,4 +53,4 @@ const FolioTable = ({ folios, ...actionHandlers }) => {
     );
 };
 
-export default FolioTable;
+export default React.memo(FolioTable);

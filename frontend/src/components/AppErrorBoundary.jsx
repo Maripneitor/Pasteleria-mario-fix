@@ -3,18 +3,18 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useSystemLog } from '../context/SystemLogContext';
 
 // Wrapper to inject context into Class Component
-const GlobalErrorBoundaryWithLog = (props) => {
+const AppErrorBoundaryWithLog = (props) => {
     // Try-catch block for hook usage in case it's used outside provider (though unlikely in App)
     try {
         const { addLog } = useSystemLog();
-        return <GlobalErrorBoundary {...props} logError={addLog} />;
+        return <AppErrorBoundary {...props} logError={addLog} />;
     } catch (e) {
         // Fallback if no provider
-        return <GlobalErrorBoundary {...props} logError={console.error} />;
+        return <AppErrorBoundary {...props} logError={console.error} />;
     }
 };
 
-class GlobalErrorBoundary extends React.Component {
+class AppErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
         this.state = { hasError: false, error: null };
@@ -27,9 +27,9 @@ class GlobalErrorBoundary extends React.Component {
     componentDidCatch(error, errorInfo) {
         // Log to SystemLog
         if (this.props.logError) {
-            this.props.logError('ERROR', 'GlobalErrorBoundary Caught Error', { error: error.toString(), info: errorInfo });
+            this.props.logError('ERROR', 'AppErrorBoundary Caught Error', { error: error.toString(), info: errorInfo });
         }
-        console.error("🔥 [GlobalErrorBoundary] caught an error:", error, errorInfo);
+        console.error("🔥 [AppErrorBoundary] caught an error:", error, errorInfo);
     }
 
     handleReset = () => {
@@ -47,11 +47,11 @@ class GlobalErrorBoundary extends React.Component {
                         </div>
 
                         <h2 className="text-2xl font-bold text-gray-800 mb-2 font-serif">
-                            ¡Ups! Algo se quemó en el horno.
+                            ¡Ups! Algo inesperado ocurrió.
                         </h2>
 
                         <p className="text-gray-600 mb-8">
-                            Nuestros panaderos digitales tuvieron un pequeño accidente. No te preocupes, los datos están seguros.
+                            Nuestros panaderos digitales tuvieron un pequeño problema. No te preocupes, intenta recargar la página.
                         </p>
 
                         <button
@@ -59,11 +59,14 @@ class GlobalErrorBoundary extends React.Component {
                             className="bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-lg inline-flex items-center gap-2 transition-colors shadow-sm"
                         >
                             <RefreshCw size={18} />
-                            Intentar de nuevo
+                            Recargar Aplicación
                         </button>
 
+                        {/* Developer Info */}
                         {process.env.NODE_ENV === 'development' && this.state.error && (
                             <div className="mt-8 text-left bg-gray-100 p-4 rounded text-xs font-mono text-red-600 overflow-x-auto">
+                                <strong>Error Details:</strong>
+                                <br />
                                 {this.state.error.toString()}
                             </div>
                         )}
@@ -76,4 +79,4 @@ class GlobalErrorBoundary extends React.Component {
     }
 }
 
-export default GlobalErrorBoundaryWithLog;
+export default AppErrorBoundaryWithLog;

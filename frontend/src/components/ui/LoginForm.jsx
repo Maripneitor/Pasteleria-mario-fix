@@ -1,12 +1,12 @@
 import React from 'react';
 import AnimatedInput from './AnimatedInput';
 import BakeryButton from './BakeryButton';
-import GlassCard from './GlassCard';
+import { Card } from './Card';
 
 const LoginForm = ({ onSubmit, email, setEmail, password, setPassword, loading, error }) => {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <GlassCard className="w-full max-w-md p-8 bg-surface">
+      <Card glass className="w-full max-w-md p-8 bg-surface">
         <form className="flex flex-col gap-6" onSubmit={onSubmit}>
           <div className="text-center mb-4">
             <p className="text-2xl font-bold text-text-main">Pastelería La Fiesta</p>
@@ -62,7 +62,7 @@ const LoginForm = ({ onSubmit, email, setEmail, password, setPassword, loading, 
             </a>
           </div>
         </form>
-      </GlassCard>
+      </Card>
     </div>
   );
 };

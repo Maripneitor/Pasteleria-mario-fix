@@ -11,7 +11,10 @@ const MOCK_OWNERS = [
     { id: 103, username: 'Mario Lozano', email: 'marioL@gmail.com', status: 'active', employeeCount: 12, permissions: { canUseAI: true, canViewStats: true, canManageUsers: true } },
 ];
 
+import { useToast } from '../context/ToastSystem';
+
 const AdminOwnerManagement = () => {
+    const { showSuccess } = useToast();
     const [owners, setOwners] = useState(MOCK_OWNERS);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,7 +26,8 @@ const AdminOwnerManagement = () => {
 
     const handleActivate = (id) => {
         setOwners(owners.map(o => o.id === id ? { ...o, status: 'active' } : o));
-        // api.put(\`/users/\${id}/activate\`)
+        showSuccess('Dueño activado correctamente.');
+        // api.put(`/users/${id}/activate`)
     };
 
     const handleTogglePermission = (id, perm) => {
@@ -33,6 +37,11 @@ const AdminOwnerManagement = () => {
                 : o
         ));
     };
+
+    const handleOwnerAdded = (u) => {
+        setOwners([...owners, { ...u, id: Date.now(), status: 'pending_verification', permissions: { canUseAI: false }, employeeCount: 0 }]);
+        showSuccess('Dueño registrado correctamente.');
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 p-6 md:p-10 md:ml-20">
@@ -64,6 +73,7 @@ const AdminOwnerManagement = () => {
                         className="flex-1 outline-none text-gray-700"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        aria-label="Buscar dueños"
                     />
                 </div>
 
@@ -125,7 +135,7 @@ const AdminOwnerManagement = () => {
                 <RegisterOwnerModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
-                    onUserAdded={(u) => setOwners([...owners, { ...u, id: Date.now(), status: 'pending_verification', permissions: { canUseAI: false }, employeeCount: 0 }])}
+                    onUserAdded={handleOwnerAdded}
                 />
             </div>
         </div>
@@ -135,6 +145,7 @@ const AdminOwnerManagement = () => {
 const PermissionToggle = ({ active, label, onClick }) => (
     <button
         onClick={onClick}
+        aria-pressed={active}
         className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition border ${active ? 'bg-bakery-primary text-white border-bakery-primary' : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`}
     >
         {label}

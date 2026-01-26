@@ -3,12 +3,19 @@ import { useUsers } from '../hooks/useUsers';
 import { Search, Plus, User, Mail, Shield, Trash2, Edit, RefreshCw, MoreVertical } from 'lucide-react';
 import BakeryButton from '../components/ui/BakeryButton';
 import CreateUserModal from '../components/admin/CreateUserModal';
+import ConfirmationModal from '../components/ui/ConfirmationModal';
+import { useToast } from '../context/ToastSystem';
 import { motion } from 'framer-motion';
 
 const AdminUserManagement = () => {
     const { users, isLoading, error, createUser, deleteUser } = useUsers();
+    const { showSuccess, showError } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    // Confirmation Modal State
+    const [userToDelete, setUserToDelete] = useState(null);
+    const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
     // Filter Logic
     const filteredUsers = users.filter(user =>
@@ -35,8 +42,39 @@ const AdminUserManagement = () => {
         }
     };
 
+    const handleDeleteClick = (user) => {
+        setUserToDelete(user);
+    };
+
+    const confirmDelete = async () => {
+        if (!userToDelete) return;
+
+        setIsDeleteLoading(true);
+        try {
+            await deleteUser(userToDelete.id);
+            showSuccess(`Usuario ${userToDelete.username} eliminado correctamente.`);
+            setUserToDelete(null);
+        } catch (err) {
+            showError('No se pudo eliminar el usuario. Intente nuevamente.');
+            console.error(err);
+        } finally {
+            setIsDeleteLoading(false);
+        }
+    };
+
+    const handleCreateSuccess = async (data) => {
+        try {
+            await createUser(data);
+            showSuccess('Usuario creado correctamente.');
+            setIsCreateModalOpen(false);
+        } catch (err) {
+            showError('Error al crear usuario.');
+            throw err; // Re-throw so modal handles it if needed, or handle here completely
+        }
+    };
+
     if (error) return (
-        <div className="p-8 text-center text-red-500 bg-red-50 rounded-lg">
+        <div className="p-8 text-center text-red-500 bg-red-50 rounded-lg" role="alert">
             {error}
         </div>
     );
@@ -67,6 +105,7 @@ const AdminUserManagement = () => {
                     className="flex-1 bg-transparent border-none outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    aria-label="Buscar usuarios"
                 />
             </div>
 
@@ -128,16 +167,25 @@ const AdminUserManagement = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right relative">
                                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Editar">
+                                                <button
+                                                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors focus:opacity-100"
+                                                    title="Editar"
+                                                    aria-label={`Editar usuario ${user.username}`}
+                                                >
                                                     <Edit size={16} />
                                                 </button>
-                                                <button className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors" title="Reset Password">
+                                                <button
+                                                    className="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors focus:opacity-100"
+                                                    title="Reset Password"
+                                                    aria-label={`Restablecer contraseña de ${user.username}`}
+                                                >
                                                     <RefreshCw size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => deleteUser(user.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                    onClick={() => handleDeleteClick(user)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:opacity-100"
                                                     title="Eliminar"
+                                                    aria-label={`Eliminar usuario ${user.username}`}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -161,7 +209,19 @@ const AdminUserManagement = () => {
             <CreateUserModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onCreateUser={createUser}
+                onCreateUser={handleCreateSuccess}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={!!userToDelete}
+                onClose={() => setUserToDelete(null)}
+                onConfirm={confirmDelete}
+                title={`¿Eliminar usuario ${userToDelete?.username}?`}
+                message="Esta acción no se puede deshacer. El usuario perderá el acceso al sistema permanentemente."
+                confirmText="Eliminar Usuario"
+                variant="danger"
+                isLoading={isDeleteLoading}
             />
         </div>
     );

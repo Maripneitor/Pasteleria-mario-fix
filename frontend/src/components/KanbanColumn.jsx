@@ -75,4 +75,4 @@ const KanbanColumn = ({ status, title, folios = [], color, onDrop, onNextStatus 
     );
 };
 
-export default KanbanColumn;
+export default React.memo(KanbanColumn);

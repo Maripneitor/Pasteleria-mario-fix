@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { X, User, Mail, Lock, ChefHat, QrCode, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
-import api from '../../services/api';
+import api from '../../api/axios';
 
 const RegisterEmployeeModal = ({ isOpen, onClose }) => {
     const { register } = useAuth();

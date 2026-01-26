@@ -1,9 +1,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import GlassCard from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import {
+    TrendingUp,
+    TrendingDown,
+    Minus,
+    Sparkles,
+    Box,
+    DollarSign,
+    ShoppingBag,
+    CheckCircle,
+    Clock
+} from 'lucide-react';
+
+const ICON_MAP = {
+    'DollarSign': DollarSign,
+    'ShoppingBag': ShoppingBag,
+    'CheckCircle': CheckCircle,
+    'Clock': Clock,
+    'Box': Box
+};
 
 const HeroCard = ({
     title,
@@ -14,7 +31,7 @@ const HeroCard = ({
     data = [10, 15, 12, 20, 18, 25, 22] // Mock sparkline data
 }) => {
     // Dynamic Icon
-    const IconComponent = LucideIcons[icon] || LucideIcons.Box;
+    const IconComponent = ICON_MAP[icon] || Box;
 
     // Trend Logic
     const trendColor = trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-gray-400';
@@ -28,16 +45,16 @@ const HeroCard = ({
     };
 
     return (
-        <GlassCard
-            className="relative overflow-hidden group min-h-[160px] flex flex-col justify-between"
-            hoverEffect={true}
+        <Card
+            glass
+            className="relative overflow-hidden group min-h-[160px] flex flex-col justify-between hover:shadow-lg transition-shadow"
         >
             {/* Sparkle Decoration */}
             <motion.div
                 variants={sparkleVariants}
                 className="absolute top-2 right-2 text-yellow-400"
             >
-                <LucideIcons.Sparkles size={16} />
+                <Sparkles size={16} />
             </motion.div>
 
             {/* Header */}
@@ -82,7 +99,7 @@ const HeroCard = ({
                     </ResponsiveContainer>
                 </div>
             </div>
-        </GlassCard>
+        </Card>
     );
 };
 

@@ -7,12 +7,12 @@ const FolioCard = ({ folio }) => {
     // Helper for status colors
     const getStatusStyle = (status) => {
         switch (status) {
-            case 'Nuevo': return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'Pendiente': return 'bg-yellow-100 text-yellow-800 border-yellow-200'; // Solicitado explícitamente
-            case 'En Producción': return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'Listo para Entrega': return 'bg-bakery-success text-green-900 border-green-200';
-            case 'Entregado': return 'bg-gray-100 text-gray-800 border-gray-200';
-            case 'Cancelado': return 'bg-bakery-error/20 text-red-900 border-red-200 opacity-70'; // Opacidad reducida
+            case 'Nuevo': return 'bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-700/10';
+            case 'Pendiente': return 'bg-amber-50 text-amber-700 border-amber-200 ring-1 ring-amber-700/10';
+            case 'En Producción': return 'bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-700/10';
+            case 'Listo para Entrega': return 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-700/10';
+            case 'Entregado': return 'bg-gray-50 text-gray-600 border-gray-200';
+            case 'Cancelado': return 'bg-red-50 text-red-700 border-red-200 ring-1 ring-red-700/10 opacity-75';
             default: return 'bg-gray-50 text-gray-600 border-gray-200';
         }
     };
@@ -53,10 +53,17 @@ const FolioCard = ({ folio }) => {
                 {/* Header */}
                 <div className="flex justify-between items-start mb-4">
                     <div>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Folio</span>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Folio</span>
+                            {isToday() && (
+                                <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 border border-rose-200">
+                                    ¡HOY!
+                                </span>
+                            )}
+                        </div>
                         <h3 className="text-xl font-serif font-bold text-bakery-text leading-none">#{folio.folioNumber}</h3>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(folio.status)} uppercase tracking-wide`}>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusStyle(folio.status)}`}>
                         {folio.status}
                     </span>
                 </div>

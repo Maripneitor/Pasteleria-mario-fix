@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, User, ShoppingBag, FileText, X, Command } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import GlassCard from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 
 const ACTIONS = [
     { id: 'new-order', label: 'Nuevo Pedido', icon: Plus, path: '/folio/nuevo', roles: ['all'] },
@@ -81,7 +81,7 @@ const QuickActions = () => {
                             transition={{ duration: 0.2 }}
                             className="w-full max-w-lg"
                         >
-                            <GlassCard className="flex flex-col max-h-[60vh]">
+                            <Card glass className="flex flex-col max-h-[60vh] overflow-hidden">
                                 {/* Header / Search */}
                                 <div className="flex items-center gap-3 p-4 border-b border-border dark:border-white/10">
                                     <Search className="text-gray-400" size={20} />
@@ -133,7 +133,7 @@ const QuickActions = () => {
                                     <span>Seleccionar <kbd className="bg-white dark:bg-gray-700 px-1 rounded">↵</kbd></span>
                                     <span>Cerrar <kbd className="bg-white dark:bg-gray-700 px-1 rounded">Esc</kbd></span>
                                 </div>
-                            </GlassCard>
+                            </Card>
                         </motion.div>
                     </div>
                 )}

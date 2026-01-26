@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --radius: 0.5rem;
     /* Brand Colors - Premium Palette */
     --brand-primary: #BA0C2F;
     /* Cherry Red (Pantone 200 C) */

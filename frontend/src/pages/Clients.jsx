@@ -2,46 +2,42 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import AnimatedInput from '../components/ui/AnimatedInput';
 import BakeryButton from '../components/ui/BakeryButton';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
 import { User, Phone, Search, Plus, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const MotionCard = motion(Card);
+
 const Clients = () => {
     const [clients, setClients] = useState([]);
-    const [filteredClients, setFilteredClients] = useState([]);
+    const [newClient, setNewClient] = useState({ name: '', phone: '', email: '' });
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
 
-    // New Client Form
-    const [newClient, setNewClient] = useState({ name: '', phone: '', phone2: '', email: '', address: '' });
-
-    useEffect(() => {
-        fetchClients();
-    }, []);
-
-    useEffect(() => {
-        if (!search) {
-            setFilteredClients(clients);
-        } else {
-            const q = search.toLowerCase();
-            setFilteredClients(clients.filter(c =>
-                c.name.toLowerCase().includes(q) ||
-                c.phone.includes(q)
-            ));
-        }
-    }, [search, clients]);
+    // Filtered clients derived state
+    const filteredClients = !search
+        ? clients
+        : clients.filter(c =>
+            c.name.toLowerCase().includes(search.toLowerCase()) ||
+            c.phone.includes(search)
+        );
 
     const fetchClients = async () => {
         try {
             const response = await api.get('/clients');
             setClients(response.data);
-            setFilteredClients(response.data);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching clients:", error);
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchClients();
+    }, []);
 
     const handleCreateClient = async (e) => {
         e.preventDefault();
@@ -58,15 +54,15 @@ const Clients = () => {
 
     return (
         <div className="space-y-6">
-            <header className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-serif font-bold text-gray-800 dark:text-white">Directorio de Clientes</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Gestiona tu base de datos de clientes.</p>
-                </div>
-                <BakeryButton variant="solid" onClick={() => setIsCreating(true)}>
-                    <Plus size={18} className="mr-2" /> Nuevo Cliente
-                </BakeryButton>
-            </header>
+            <PageHeader
+                title="Directorio de Clientes"
+                subtitle="Gestiona tu base de datos de clientes."
+                action={
+                    <BakeryButton variant="solid" onClick={() => setIsCreating(true)}>
+                        <Plus size={18} className="mr-2" /> Nuevo Cliente
+                    </BakeryButton>
+                }
+            />
 
             {/* Search */}
             <div className="relative max-w-md">
@@ -87,11 +83,11 @@ const Clients = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredClients.map(client => (
-                        <motion.div
+                        <MotionCard
                             key={client.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow"
+                            className="p-4 hover:shadow-md transition-shadow"
                         >
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex items-center gap-3">
@@ -116,7 +112,7 @@ const Clients = () => {
                                     </div>
                                 )}
                             </div>
-                        </motion.div>
+                        </MotionCard>
                     ))}
                 </div>
             )}

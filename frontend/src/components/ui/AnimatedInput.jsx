@@ -8,6 +8,8 @@ const AnimatedInput = ({ label, className, error, id, register, validation, type
     // Extract react-hook-form props if register is provided
     const registerProps = register && id ? register(id, validation) : {};
 
+    const errorId = error ? `${id}-error` : undefined;
+
     return (
         <div className="relative group mb-4">
             {isTextarea ? (
@@ -21,6 +23,8 @@ const AnimatedInput = ({ label, className, error, id, register, validation, type
                         className
                     )}
                     placeholder=" "
+                    aria-invalid={!!error}
+                    aria-describedby={errorId}
                     {...registerProps}
                     {...props}
                 />
@@ -36,6 +40,8 @@ const AnimatedInput = ({ label, className, error, id, register, validation, type
                         className
                     )}
                     placeholder=" "
+                    aria-invalid={!!error}
+                    aria-describedby={errorId}
                     {...registerProps}
                     {...props}
                 />
@@ -52,7 +58,11 @@ const AnimatedInput = ({ label, className, error, id, register, validation, type
                 )}>
                 {label}
             </label>
-            {error && <span className="mt-1 text-xs text-status-danger">{error.message || error}</span>}
+            {error && (
+                <span id={errorId} className="mt-1 text-xs text-status-danger" role="alert">
+                    {error.message || error}
+                </span>
+            )}
         </div>
     );
 };

@@ -4,6 +4,8 @@ import { Send, Sparkles, ArrowLeft, Save, Bot, User } from 'lucide-react';
 import api from '../api/axios';
 import FolioForm from '../components/FolioForm';
 import { useToast } from '../context/ToastSystem';
+import ErrorState from '../components/common/ErrorState';
+import Skeleton from '../components/common/Skeleton';
 
 const SessionConsole = () => {
     const { id } = useParams();
@@ -14,6 +16,7 @@ const SessionConsole = () => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null); // Add error state
     const [processing, setProcessing] = useState(false);
 
     // Extract data for the form
@@ -23,6 +26,7 @@ const SessionConsole = () => {
 
     const fetchSession = async () => {
         try {
+            setError(null);
             const res = await api.get(`/ai-sessions/${id}`);
             setSession(res.data);
             setMessages(res.data.chatHistory || []);
@@ -30,8 +34,8 @@ const SessionConsole = () => {
             setLoading(false);
         } catch (error) {
             console.error(error);
-            showError("No se pudo cargar la sesión");
-            navigate('/asistente-ia');
+            setError("No se pudo cargar la sesión");
+            setLoading(false);
         }
     };
 
@@ -86,7 +90,26 @@ const SessionConsole = () => {
         }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center">Cargando consola...</div>;
+    if (loading) return (
+        <div className="h-screen flex items-center justify-center p-8">
+            <div className="max-w-md w-full space-y-4">
+                <Skeleton variant="text" height="40px" width="60%" className="mx-auto" />
+                <Skeleton variant="rect" height="300px" className="rounded-xl" />
+            </div>
+        </div>
+    );
+
+    if (error) return (
+        <div className="h-screen flex items-center justify-center">
+            <ErrorState
+                message={error}
+                onRetry={() => {
+                    setLoading(true);
+                    fetchSession();
+                }}
+            />
+        </div>
+    );
 
     return (
         <div className="h-screen flex flex-col bg-gray-100 dark:bg-slate-900 overflow-hidden">
@@ -122,8 +145,8 @@ const SessionConsole = () => {
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user'
-                                        ? 'bg-blue-600 text-white rounded-tr-none'
-                                        : 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                                    ? 'bg-blue-600 text-white rounded-tr-none'
+                                    : 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
                                     }`}>
                                     <div className="flex items-center gap-1 mb-1 opacity-70 text-xs">
                                         {msg.role === 'user' ? <User size={10} /> : <Bot size={10} />}

@@ -5,7 +5,7 @@ import InventoryWatch from './production/InventoryWatch';
 import { useToast } from '../context/ToastSystem';
 import { Loader2 } from 'lucide-react';
 import EmptyState from './EmptyState';
-import GlassCard from './ui/GlassCard';
+import { Card } from './ui/Card';
 import { useOrderSync } from '../context/OrderSyncContext'; // Import Sync Context
 
 const COLUMNS = [
@@ -61,9 +61,9 @@ const KanbanBoard = () => {
         </div>
     );
 
-    if (error) return (
-        <div className="text-center text-red-500 py-10">{error}</div>
-    );
+    // if (error) return (
+    //     <div className="text-center text-red-500 py-10">{error}</div>
+    // );
 
     return (
         <div className="h-full flex flex-col relative space-y-4">
@@ -80,7 +80,7 @@ const KanbanBoard = () => {
                     />
                 </div>
             ) : (
-                <GlassCard className="flex-1 overflow-x-auto overflow-y-hidden border border-border p-0">
+                <Card glass className="flex-1 overflow-x-auto overflow-y-hidden border border-border p-0">
                     <div className="flex h-full gap-4 p-4 min-w-max pb-6">
                         {COLUMNS.map(col => (
                             <KanbanColumn
@@ -94,7 +94,7 @@ const KanbanBoard = () => {
                             />
                         ))}
                     </div>
-                </GlassCard>
+                </Card>
             )}
         </div>
     );

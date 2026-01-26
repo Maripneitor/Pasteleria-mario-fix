@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Delete, X, ChefHat } from 'lucide-react';
-import GlassCard from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 
 const PinPadModal = ({ isOpen, onClose, onSuccess }) => {
     const [pin, setPin] = useState('');
@@ -55,7 +55,7 @@ const PinPadModal = ({ isOpen, onClose, onSuccess }) => {
                         exit={{ opacity: 0, scale: 0.9 }}
                         className="w-full max-w-sm"
                     >
-                        <GlassCard className={`p-6 border-2 ${error ? 'border-red-500 animate-shake' : 'border-slate-700'}`}>
+                        <Card glass className={`p-6 border-2 ${error ? 'border-red-500 animate-shake' : 'border-slate-700'}`}>
                             {/* Header */}
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-xl font-bold flex items-center gap-2 text-white">
@@ -72,8 +72,8 @@ const PinPadModal = ({ isOpen, onClose, onSuccess }) => {
                                     <div
                                         key={i}
                                         className={`w-4 h-4 rounded-full transition-all duration-200 ${i < pin.length
-                                                ? (error ? 'bg-red-500' : 'bg-brand-primary scale-125')
-                                                : 'bg-slate-700'
+                                            ? (error ? 'bg-red-500' : 'bg-brand-primary scale-125')
+                                            : 'bg-slate-700'
                                             }`}
                                     />
                                 ))}
@@ -104,7 +104,7 @@ const PinPadModal = ({ isOpen, onClose, onSuccess }) => {
                                     <Delete size={24} />
                                 </button>
                             </div>
-                        </GlassCard>
+                        </Card>
                     </motion.div>
                 </div>
             )}

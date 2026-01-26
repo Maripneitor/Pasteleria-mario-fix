@@ -14,7 +14,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
         if (!allowedRoles.includes(user.role)) {
             // User logged in but not authorized for this specific route
             console.warn(`Access denied for role: ${user.role} to route requiring: ${allowedRoles.join(', ')}`);
-            return <Navigate to="/dashboard" replace />;
+            return <Navigate to="/access-denied" replace />;
         }
     }
 

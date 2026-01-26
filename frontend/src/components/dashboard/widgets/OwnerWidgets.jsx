@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, FileText, Settings, BarChart2 } from 'lucide-react';
-import GlassCard from '../../ui/GlassCard';
+import { Card } from '../../ui/Card';
 import StatsGrid from '../StatsGrid';
 import SalesChart from '../SalesChart';
 import FlavorChart from '../FlavorChart';
+import EmptyState from '../../EmptyState';
 import { useNavigate } from 'react-router-dom';
 
 const OwnerWidgets = ({ stats, salesData, flavorData }) => {
@@ -15,12 +16,14 @@ const OwnerWidgets = ({ stats, salesData, flavorData }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onClick}
-            className="flex flex-col items-center justify-center p-4 bg-white dark:bg-surface-card rounded-xl border border-border dark:border-white/5 shadow-sm hover:shadow-md transition-all h-24 gap-2"
+            className="w-full text-left"
         >
-            <div className={`p-2 rounded-lg ${color}`}>
-                <Icon size={20} />
-            </div>
-            <span className="text-xs font-semibold text-text-primary">{label}</span>
+            <Card className="flex flex-col items-center justify-center p-4 h-24 gap-2 hover:shadow-md transition-all cursor-pointer bg-surface-card hover:bg-surface-card/80 border-border">
+                <div className={`p-2 rounded-lg ${color}`}>
+                    <Icon size={20} />
+                </div>
+                <span className="text-xs font-semibold text-text-primary">{label}</span>
+            </Card>
         </motion.button>
     );
 
@@ -28,7 +31,7 @@ const OwnerWidgets = ({ stats, salesData, flavorData }) => {
         <div className="space-y-6">
             {/* Key Metrics - Bento Row 1 */}
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-text-primary mb-4 px-1">Resumen General</h2>
+                <h2 className="text-2xl font-bold text-text-primary mb-4 px-1 font-serif tracking-tight">Resumen General</h2>
                 <StatsGrid stats={stats} />
             </div>
 
@@ -62,14 +65,26 @@ const OwnerWidgets = ({ stats, salesData, flavorData }) => {
 
             {/* Charts - Bento Row 3 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <GlassCard className="lg:col-span-2 p-6 min-h-[400px]">
-                    <h3 className="text-lg font-bold mb-4 text-text-primary">Tendencia de Ventas</h3>
-                    <SalesChart data={salesData} />
-                </GlassCard>
-                <GlassCard className="lg:col-span-1 p-6 min-h-[400px]">
-                    <h3 className="text-lg font-bold mb-4 text-text-primary">Top Sabores</h3>
-                    <FlavorChart data={flavorData} />
-                </GlassCard>
+                <Card glass className="lg:col-span-2 p-6 min-h-[400px]">
+                    <h3 className="text-lg font-bold mb-4 text-text-primary font-serif">Tendencia de Ventas</h3>
+                    {salesData && salesData.length > 0 ? (
+                        <SalesChart data={salesData} />
+                    ) : (
+                        <div className="h-[300px] flex items-center justify-center">
+                            <EmptyState message="No hay datos de ventas disponibles" subMessage="Intenta seleccionar otro rango de fechas" />
+                        </div>
+                    )}
+                </Card>
+                <Card glass className="lg:col-span-1 p-6 min-h-[400px]">
+                    <h3 className="text-lg font-bold mb-4 text-text-primary font-serif">Top Sabores</h3>
+                    {flavorData && flavorData.length > 0 ? (
+                        <FlavorChart data={flavorData} />
+                    ) : (
+                        <div className="h-[300px] flex items-center justify-center">
+                            <EmptyState message="Sin datos de sabores" subMessage="Realiza ventas para ver estadísticas" />
+                        </div>
+                    )}
+                </Card>
             </div>
         </div>
     );

@@ -19,6 +19,7 @@ export const ToastProvider = ({ children }) => {
 
     const showSuccess = (msg) => addToast('success', msg);
     const showError = (msg) => addToast('error', msg);
+    const showWarning = (msg) => addToast('warning', msg);
     const showWhatsapp = (msg) => addToast('whatsapp', msg);
     const showProduction = (msg, title) => addToast('production', msg, title);
 
@@ -52,7 +53,7 @@ export const ToastProvider = ({ children }) => {
     };
 
     return (
-        <ToastContext.Provider value={{ showSuccess, showError, showAiActive, showWhatsapp, showProduction, showContextToast }}>
+        <ToastContext.Provider value={{ showSuccess, showError, showWarning, showAiActive, showWhatsapp, showProduction, showContextToast }}>
             {children}
             {/* Position: Top Center for Desktop, Bottom Center for Mobile (visually safer) */}
             <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-md px-4 md:top-8">
@@ -89,6 +90,14 @@ const ToastItem = ({ type, message, customTitle, context }) => {
             titleColor: 'text-red-800',
             defaultTitle: 'Error detectado',
             shadow: 'shadow-red-100/50'
+        },
+        warning: {
+            icon: <AlertOctagon className="text-amber-500" size={24} />,
+            bg: 'bg-amber-50',
+            border: 'border-amber-200',
+            titleColor: 'text-amber-800',
+            defaultTitle: 'Advertencia',
+            shadow: 'shadow-amber-100/50'
         },
         ai: {
             icon: <Zap className="text-blue-500 fill-blue-500" size={24} />,

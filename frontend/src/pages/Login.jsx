@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useToast } from '../context/ToastSystem';
-import BakeryButton from '../components/ui/BakeryButton';
-import AnimatedInput from '../components/ui/AnimatedInput';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
 
-import { ChefHat } from 'lucide-react';
+import { ChefHat, Mail, Lock } from 'lucide-react';
 import PinPadModal from '../components/auth/PinPadModal';
 
 const Login = () => {
@@ -49,49 +50,59 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-surface-muted p-4 relative">
-            <div className="w-full max-w-md bg-surface p-8 rounded-xl shadow-xl border border-border relative z-10">
-                <div className="flex justify-center mb-6">
-                    <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-3xl">🍰</span>
+            <Card className="w-full max-w-md relative z-10">
+                <CardHeader className="text-center pb-2">
+                    <div className="flex justify-center mb-4">
+                        <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-3xl">🍰</span>
+                        </div>
                     </div>
-                </div>
-                <h2 className="text-2xl font-bold text-text-primary mb-6 text-center">Iniciar Sesión</h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <AnimatedInput
-                        label="Correo Electrónico"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={isLoading}
-                    />
-                    <AnimatedInput
-                        label="Contraseña"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                    />
-                    <BakeryButton
-                        type="submit"
-                        variant="solid"
-                        className="w-full"
-                        isLoading={isLoading}
-                    >
-                        Entrar
-                    </BakeryButton>
-                </form>
-            </div>
+                    <CardTitle>Iniciar Sesión</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <Input
+                            label="Correo Electrónico"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            disabled={isLoading}
+                            icon={Mail}
+                            placeholder="ejemplo@correo.com"
+                        />
+                        <Input
+                            label="Contraseña"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={isLoading}
+                            icon={Lock}
+                            placeholder="••••••••"
+                        />
+                        <Button
+                            type="submit"
+                            variant="solid"
+                            className="w-full"
+                            isLoading={isLoading}
+                        >
+                            Entrar
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
 
             {/* Chef Access Button */}
             <div className="absolute top-4 right-4 z-20">
-                <button
+                <Button
                     onClick={() => setShowPinPad(true)}
-                    className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-gray-200 dark:border-slate-700 text-gray-400 hover:text-brand-primary transition-colors"
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full shadow-lg h-12 w-12 bg-surface hover:text-brand-primary border-border"
                 >
                     <ChefHat size={24} />
-                </button>
+                </Button>
             </div>
 
             <PinPadModal

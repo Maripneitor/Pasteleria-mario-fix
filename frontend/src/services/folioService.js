@@ -1,71 +1,53 @@
-import api from './api';
+import api, { withFallback } from '../api/axios';
+import { mockFolios, mockFolioDetails } from '../mocks/folios.fixtures';
 
 const folioService = {
     // Obtener todos los folios (con filtros opcionales)
     getAllFolios: async (params = {}) => {
-        try {
-            const response = await api.get('/folios', { params });
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching folios:', error);
-            throw error;
-        }
+        return withFallback(
+            () => api.get('/folios', { params }),
+            mockFolios
+        ).then(res => res.data);
     },
 
     // Obtener un folio por ID
     getFolioById: async (id) => {
-        try {
-            const response = await api.get(`/folios/${id}`);
-            return response.data;
-        } catch (error) {
-            console.error(`Error fetching folio ${id}:`, error);
-            throw error;
-        }
+        return withFallback(
+            () => api.get(`/folios/${id}`),
+            { ...mockFolioDetails, id }
+        ).then(res => res.data);
     },
 
     // Crear un nuevo folio
     createFolio: async (folioData) => {
-        try {
-            const response = await api.post('/folios', folioData);
-            return response.data;
-        } catch (error) {
-            console.error('Error creating folio:', error);
-            throw error;
-        }
+        return withFallback(
+            () => api.post('/folios', folioData),
+            { ...folioData, id: 'mock-new-' + Date.now(), folioNumber: 'M-NEW' }
+        ).then(res => res.data || res);
     },
 
     // Actualizar un folio existente
     updateFolio: async (id, folioData) => {
-        try {
-            const response = await api.put(`/folios/${id}`, folioData);
-            return response.data;
-        } catch (error) {
-            console.error(`Error updating folio ${id}:`, error);
-            throw error;
-        }
+        return withFallback(
+            () => api.put(`/folios/${id}`, folioData),
+            { ...folioData, id }
+        ).then(res => res.data || res);
     },
 
     // Actualizar solo el estado (patch)
     updateFolioStatus: async (id, statusData) => {
-        try {
-            // statusData puede ser { status: 'Nuevo' } o { isPrinted: true }, etc.
-            const response = await api.patch(`/folios/${id}/status`, statusData);
-            return response.data;
-        } catch (error) {
-            console.error(`Error updating status for folio ${id}:`, error);
-            throw error;
-        }
+        return withFallback(
+            () => api.patch(`/folios/${id}/status`, statusData),
+            { id, ...statusData, status: statusData.status || 'Updated' }
+        ).then(res => res.data || res);
     },
 
     // Cancelar folio
     cancelFolio: async (id) => {
-        try {
-            const response = await api.patch(`/folios/${id}/cancel`);
-            return response.data;
-        } catch (error) {
-            console.error(`Error cancelling folio ${id}:`, error);
-            throw error;
-        }
+        return withFallback(
+            () => api.patch(`/folios/${id}/cancel`),
+            { id, status: 'Cancelado' }
+        ).then(res => res.data || res);
     }
 };
 

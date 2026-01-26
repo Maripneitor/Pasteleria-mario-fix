@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, Plus, Search, DollarSign, Truck } from 'lucide-react';
-import GlassCard from '../../ui/GlassCard';
+import { Card } from '../../ui/Card';
 import { useNavigate } from 'react-router-dom';
 
 const EmployeeWidgets = ({ orders }) => {
@@ -19,23 +19,25 @@ const EmployeeWidgets = ({ orders }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
-            className={`w-full h-32 rounded-2xl ${color} text-white flex flex-col items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all p-4`}
+            className="w-full"
         >
-            <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
-                <Icon size={32} />
-            </div>
-            <span className="font-bold text-lg">{label}</span>
+            <Card className={`h-32 ${color} text-white flex flex-col items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all p-4 border-none`}>
+                <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
+                    <Icon size={32} />
+                </div>
+                <span className="font-bold text-lg">{label}</span>
+            </Card>
         </motion.button>
     );
 
     return (
         <div className="space-y-6">
             {/* Shift Summary Section */}
-            <h2 className="text-2xl font-bold text-text-primary px-1">Tu Turno Hoy</h2>
+            <h2 className="text-2xl font-bold text-text-primary px-1 font-serif tracking-tight">Tu Turno Hoy</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Pending Tasks */}
-                <GlassCard className="p-6 border-l-4 border-l-yellow-500">
+                <Card glass className="p-6 border-l-4 border-l-yellow-500">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 flex items-center justify-center">
                             <Clock size={24} />
@@ -45,10 +47,10 @@ const EmployeeWidgets = ({ orders }) => {
                             <div className="text-sm text-text-secondary">Pendientes</div>
                         </div>
                     </div>
-                </GlassCard>
+                </Card>
 
                 {/* Completed Tasks */}
-                <GlassCard className="p-6 border-l-4 border-l-green-500">
+                <Card glass className="p-6 border-l-4 border-l-green-500">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center">
                             <CheckCircle size={24} />
@@ -58,11 +60,11 @@ const EmployeeWidgets = ({ orders }) => {
                             <div className="text-sm text-text-secondary">Entregados</div>
                         </div>
                     </div>
-                </GlassCard>
+                </Card>
             </div>
 
             {/* Giant Action Buttons Grid */}
-            <h2 className="text-2xl font-bold text-text-primary px-1 mt-8">Accesos Rápidos</h2>
+            <h2 className="text-2xl font-bold text-text-primary px-1 mt-8 font-serif tracking-tight">Accesos Rápidos</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 <ActionButton
                     label="Nuevo Pedido"

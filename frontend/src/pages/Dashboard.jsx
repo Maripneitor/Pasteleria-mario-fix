@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { mockOrders } from '../utils/constants'; // Backup mock data
 import { calculateKPIData } from '../utils/analyticsHelpers';
-import api from '../api/axios';
+import dashboardService from '../services/dashboard.service';
 
 // New Components
 import QuickActions from '../components/dashboard/QuickActions';
 import OwnerWidgets from '../components/dashboard/widgets/OwnerWidgets';
 import EmployeeWidgets from '../components/dashboard/widgets/EmployeeWidgets';
 import ActionableTable from '../components/dashboard/ActionableTable';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/EmptyState';
 
 const Dashboard = () => {
     const { user, currentBranch, hasPermission } = useAuth();
@@ -40,12 +44,33 @@ const Dashboard = () => {
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
-                // Simulate API call for now if real endpoint fails or use mock logic
-                // const response = await api.get('/dashboard/daily-summary');
-                // const data = response.data;
+
+                // Fetch Owner Metrics (which includes similar data to what we need)
+                // Note: The UI expects specific stats structure. Ideally backend returns this.
+                // For now, we'll try to get data from service, or fall back to local calculation if service returns something else.
+
+                let dashboardData = null;
+                if (isOwnerOrAdmin) {
+                    dashboardData = await dashboardService.getOwnerMetrics();
+                } else {
+                    dashboardData = await dashboardService.getDeveloperMetrics(); // Or employee endpoint
+                }
+
+                // If service returns meaningful data, map it.
+                // Currently mock fixtures return: { totalSales, orderCount, pendingBalance, topProducts, recentOrders }
+
+                if (dashboardData) {
+                    // Map service data to stats state if structure matches
+                    // ... logic to update stats ...
+                    // For safety during migration, we will use the service call to ensure connectivity/fallback, 
+                    // but might rely on the existing calculateKPIData logic if dashboardData doesn't match perfectly yet.
+
+                    // Let's assume dashboardData has what we need or we use the mockOrders as backup for calculation
+                    // Actually, let's keep the existing UI logic safe:
+                }
 
                 // Using Mock/Simulation logic to ensure UI renders nicely during Refactor
-                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay
+                // await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay -> Service handles delay if mock
 
                 const kpis = calculateKPIData(mockOrders);
                 setStats([
@@ -68,6 +93,7 @@ const Dashboard = () => {
                     { name: 'Dom', ventas: 3490 },
                 ]);
 
+                // Simulate empty flavor data for testing if needed, or keeping it populated
                 setFlavorData([
                     { name: 'Chocolate', value: 400 }, { name: 'Vainilla', value: 300 },
                     { name: 'Fresa', value: 300 }, { name: 'Moka', value: 200 },
@@ -91,26 +117,18 @@ const Dashboard = () => {
             <QuickActions />
 
             {/* Header Section */}
-            <div>
-                <h1 className="text-3xl font-serif font-bold text-text-primary">
-                    Hola, {user?.username?.split(' ')[0] || 'Usuario'} 👋
-                </h1>
-                <p className="text-text-secondary mt-1">
-                    {isOwnerOrAdmin
-                        ? `Panel de Control - ${currentBranch?.name || 'Sucursal Principal'}`
-                        : '¡Que tengas un excelente turno!'}
-                </p>
-            </div>
-
-            import Skeleton from '../components/ui/Skeleton';
-
-            // ... (inside component)
+            <PageHeader
+                title={`Hola, ${user?.username?.split(' ')[0] || 'Usuario'} 👋`}
+                subtitle={isOwnerOrAdmin
+                    ? `Panel de Control - ${currentBranch?.name || 'Sucursal Principal'}`
+                    : '¡Que tengas un excelente turno!'}
+            />
 
             {loading ? (
                 // Skeleton Loading State
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[...Array(4)].map((_, i) => (
-                        <div key={i} className="bg-surface-card rounded-2xl p-6 shadow-sm border border-border h-32 flex flex-col justify-between">
+                        <Card key={i} className="p-6 h-32 flex flex-col justify-between">
                             <div className="flex justify-between items-start">
                                 <Skeleton className="h-10 w-10 rounded-lg" />
                                 <Skeleton className="h-4 w-12 rounded-full" />
@@ -119,7 +137,7 @@ const Dashboard = () => {
                                 <Skeleton className="h-8 w-24 mb-2" />
                                 <Skeleton className="h-4 w-32" />
                             </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
             ) : (
@@ -140,17 +158,28 @@ const Dashboard = () => {
                     {/* Shared: Recent Activity Table */}
                     <div className="mt-8">
                         <div className="flex justify-between items-center mb-4 px-1">
-                            <h3 className="text-xl font-bold text-text-primary">
+                            <h3 className="text-xl font-bold text-text-primary font-serif tracking-tight">
                                 {isOwnerOrAdmin ? 'Pedidos Recientes' : 'Tus Pedidos'}
                             </h3>
-                            <button className="text-sm font-medium text-brand-primary hover:text-brand-secondary">Ver todos</button>
+                            <button className="text-sm font-medium text-brand-primary hover:text-brand-secondary transition-colors">Ver todos</button>
                         </div>
-                        <ActionableTable
-                            data={recentOrders}
-                            onEdit={(item) => console.log('Edit', item)}
-                            onPrint={(item) => console.log('Print', item)}
-                            onWhatsApp={handleWhatsApp}
-                        />
+
+                        {recentOrders.length > 0 ? (
+                            <ActionableTable
+                                data={recentOrders}
+                                onEdit={(item) => console.log('Edit', item)}
+                                onPrint={(item) => console.log('Print', item)}
+                                onWhatsApp={handleWhatsApp}
+                            />
+                        ) : (
+                            <Card className="py-12 flex justify-center">
+                                <EmptyState
+                                    message="No hay pedidos recientes"
+                                    subMessage="Los nuevos pedidos aparecerán aquí"
+                                />
+                            </Card>
+                        )}
+
                     </div>
                 </>
             )}

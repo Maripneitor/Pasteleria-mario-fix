@@ -3,6 +3,10 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Key, ChefHat, Briefcase } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
 const Register = () => {
     const { register } = useAuth();
@@ -57,7 +61,7 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="min-h-screen bg-surface-muted flex items-center justify-center p-4 relative overflow-hidden">
             {/* Background Texture */}
             <div className="absolute inset-0 z-0 pointer-events-none opacity-50"
                 style={{ backgroundImage: 'radial-gradient(#D4A373 1px, transparent 1px)', backgroundSize: '20px 20px' }}
@@ -67,126 +71,113 @@ const Register = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden relative z-10 border border-[#E6B8A2]"
+                className="w-full max-w-md relative z-10"
             >
-                {/* Header Decoration */}
-                <div className="h-3 bg-[#D4A373]" />
-
-                <div className="p-8">
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-serif font-bold text-[#4A403A]">Únete a La Fiesta</h2>
-                        <p className="text-[#9C8C74] mt-2">Crea tu cuenta para comenzar</p>
-                    </div>
-
-                    {error && (
-                        <div className="bg-[#3E2723] text-[#EFEBE9] text-sm p-4 rounded-lg mb-6 flex items-center gap-3 border-2 border-[#D7CCC8] shadow-md font-serif" style={{ borderStyle: 'dashed' }}>
-                            <span className="text-xl">⚠️</span>
-                            <span>{error}</span>
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-[#4A403A] flex items-center gap-2">
-                                <User size={16} /> Nombre
-                            </label>
-                            <input
-                                type="text"
-                                name="username"
-                                placeholder="Tu nombre completo"
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:ring-2 focus:ring-[#D4A373] focus:border-transparent outline-none transition-all"
-                                onChange={handleChange} required
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-[#4A403A] flex items-center gap-2">
-                                <Mail size={16} /> Email
-                            </label>
-                            <input
-                                type="email"
-                                name="email"
-                                placeholder="ejemplo@correo.com"
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:ring-2 focus:ring-[#D4A373] focus:border-transparent outline-none transition-all"
-                                onChange={handleChange} required
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-[#4A403A] flex items-center gap-2">
-                                <Lock size={16} /> Contraseña
-                            </label>
-                            <input
-                                type="password"
-                                name="password"
-                                placeholder="••••••••"
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:ring-2 focus:ring-[#D4A373] focus:border-transparent outline-none transition-all"
-                                onChange={(e) => {
-                                    handleChange(e);
-                                    // Live validation logic could be here, but using Simple HTML5 pattern/onInvalid for now or checking on Submit
-                                }}
-                                required
-                            />
-                            {/* Password Strength Indicators */}
-                            <div className="mt-2 grid grid-cols-4 gap-1">
-                                <div className={`h-1 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                                <div className={`h-1 rounded-full ${/[A-Z]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                                <div className={`h-1 rounded-full ${/[0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                                <div className={`h-1 rounded-full ${/[^A-Za-z0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
-                            </div>
-                            <div className="flex justify-between text-[10px] text-gray-400 px-1">
-                                <span>8+ chars</span>
-                                <span>Mayúscula</span>
-                                <span>Número</span>
-                                <span>Simbolo</span>
-                            </div>
-                        </div>
-
-                        {/* Role Selection (Locked if Invite) */}
-                        {!inviteToken ? (
-                            <div className="pt-2">
-                                <label className="text-sm font-semibold text-[#4A403A] block mb-2">Rol deseado</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, role: 'Dueño' })}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${formData.role === 'Dueño' ? 'border-[#D4A373] bg-[#FEFAE0] text-[#4A403A]' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
-                                    >
-                                        <Briefcase size={20} />
-                                        <span className="text-xs font-bold">Dueño / Admin</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, role: 'Empleado' })}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${formData.role === 'Empleado' ? 'border-[#D4A373] bg-[#FEFAE0] text-[#4A403A]' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
-                                    >
-                                        <ChefHat size={20} />
-                                        <span className="text-xs font-bold">Empleado</span>
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-green-700 text-sm flex items-center gap-2">
-                                <Key size={16} />
-                                <span>Aplicando <strong>Invitación de Personal</strong></span>
+                <Card className="border-brand-primary/20">
+                    <div className="h-3 bg-brand-primary" />
+                    <CardHeader className="text-center">
+                        <CardTitle className="text-3xl font-serif text-brand-secondary">Únete a La Fiesta</CardTitle>
+                        <CardDescription>Crea tu cuenta para comenzar</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {error && (
+                            <div className="bg-red-50 text-red-700 text-sm p-4 rounded-lg mb-6 flex items-center gap-3 border border-red-200 border-dashed">
+                                <span className="text-xl">⚠️</span>
+                                <span>{error}</span>
                             </div>
                         )}
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-[#D4A373] hover:bg-[#C29263] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#D4A373]/30 transition-all flex items-center justify-center gap-2 mt-4"
-                        >
-                            {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
-                        </button>
-                    </form>
-                </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <Input
+                                label="Nombre"
+                                name="username"
+                                placeholder="Tu nombre completo"
+                                icon={User}
+                                onChange={handleChange}
+                                required
+                            />
 
-                <div className="bg-[#FAFAFA] p-4 text-center border-t border-gray-100">
-                    <p className="text-sm text-[#9C8C74]">
-                        ¿Ya tienes cuenta? <Link to="/login" className="text-[#D4A373] font-bold hover:underline">Inicia Sesión</Link>
-                    </p>
-                </div>
+                            <Input
+                                label="Email"
+                                type="email"
+                                name="email"
+                                placeholder="ejemplo@correo.com"
+                                icon={Mail}
+                                onChange={handleChange}
+                                required
+                            />
+
+                            <div>
+                                <Input
+                                    label="Contraseña"
+                                    type="password"
+                                    name="password"
+                                    placeholder="••••••••"
+                                    icon={Lock}
+                                    onChange={handleChange}
+                                    required
+                                />
+                                {/* Password Strength Indicators */}
+                                <div className="mt-2 grid grid-cols-4 gap-1">
+                                    <div className={`h-1 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                                    <div className={`h-1 rounded-full ${/[A-Z]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                                    <div className={`h-1 rounded-full ${/[0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                                    <div className={`h-1 rounded-full ${/[^A-Za-z0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                                </div>
+                                <div className="flex justify-between text-[10px] text-text-secondary px-1 mt-1">
+                                    <span>8+ chars</span>
+                                    <span>Mayúscula</span>
+                                    <span>Número</span>
+                                    <span>Simbolo</span>
+                                </div>
+                            </div>
+
+                            {/* Role Selection (Locked if Invite) */}
+                            {!inviteToken ? (
+                                <div className="pt-2">
+                                    <label className="text-sm font-semibold text-text-primary block mb-2">Rol deseado</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, role: 'Dueño' })}
+                                            className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${formData.role === 'Dueño' ? 'border-brand-primary bg-brand-primary/5 text-brand-primary' : 'border-border text-text-secondary hover:bg-surface-muted'}`}
+                                        >
+                                            <Briefcase size={20} />
+                                            <span className="text-xs font-bold">Dueño / Admin</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, role: 'Empleado' })}
+                                            className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${formData.role === 'Empleado' ? 'border-brand-primary bg-brand-primary/5 text-brand-primary' : 'border-border text-text-secondary hover:bg-surface-muted'}`}
+                                        >
+                                            <ChefHat size={20} />
+                                            <span className="text-xs font-bold">Empleado</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                                    <Key size={16} />
+                                    <span>Aplicando <strong>Invitación de Personal</strong></span>
+                                </div>
+                            )}
+
+                            <Button
+                                type="submit"
+                                isLoading={loading}
+                                className="w-full mt-4"
+                                variant="solid"
+                            >
+                                Crear Cuenta
+                            </Button>
+                        </form>
+                    </CardContent>
+                    <CardFooter className="flex justify-center bg-surface-muted/50 border-t py-4">
+                        <p className="text-sm text-text-secondary">
+                            ¿Ya tienes cuenta? <Link to="/login" className="text-brand-primary font-bold hover:underline">Inicia Sesión</Link>
+                        </p>
+                    </CardFooter>
+                </Card>
             </motion.div>
         </div>
     );

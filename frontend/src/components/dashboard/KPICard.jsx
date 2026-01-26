@@ -1,9 +1,15 @@
-import React from 'react';
-import CountUp from 'react-countup';
-import * as HeroIcons from '@heroicons/react/24/outline'; // Adjust based on installed version
+import { DollarSign, ShoppingBag, CheckCircle, Clock, QuestionMarkCircle } from 'lucide-react'; // Switched to lucide-react for consistency
+
+const ICON_MAP = {
+    'DollarSign': DollarSign,
+    'ShoppingBag': ShoppingBag,
+    'CheckCircle': CheckCircle,
+    'Clock': Clock,
+    'QuestionMarkCircle': QuestionMarkCircle
+};
 
 const KPICard = ({ title, value, prefix = '', icon, color, bg }) => {
-    const IconComponent = HeroIcons[icon] || HeroIcons['QuestionMarkCircleIcon'];
+    const IconComponent = ICON_MAP[icon] || ICON_MAP['QuestionMarkCircle'];
 
     return (
         <div className="bg-white dark:bg-bakery-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 flex items-center justify-between border border-gray-100 dark:border-gray-700">

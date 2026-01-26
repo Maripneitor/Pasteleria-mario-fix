@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
@@ -8,96 +8,61 @@ import { ToastProvider } from './context/ToastSystem';
 import DashboardLayout from './components/layout/DashboardLayout';
 import PageTransition from './components/layout/PageTransition';
 import ProtectedRoute from './components/ProtectedRoute';
-import GlobalErrorBoundary from './components/GlobalErrorBoundary';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import DevOverlay from './components/DevOverlay';
 import CakeLoader from './components/CakeLoader';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-import { ROLES } from './config/permissions';
-
-// Sticky/Critical imports can remain if lightweight, but pages should be lazy
-const LogIn = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const DevDashboard = lazy(() => import('./pages/DevDashboard'));
-const Calendar = lazy(() => import('./pages/Calendar'));
-const AiInbox = lazy(() => import('./pages/AiInbox'));
-const SessionConsole = lazy(() => import('./pages/SessionConsole'));
-const Folios = lazy(() => import('./pages/Folios'));
-const NewFolio = lazy(() => import('./pages/NewFolio'));
-const KanbanBoard = lazy(() => import('./components/KanbanBoard'));
-const Statistics = lazy(() => import('./pages/Statistics'));
-const Clients = lazy(() => import('./pages/Clients'));
-const SystemHealth = lazy(() => import('./pages/SystemHealth'));
-const AdminOwnerManagement = lazy(() => import('./pages/AdminOwnerManagement'));
-const AdminGlobalAnalytics = lazy(() => import('./pages/AdminGlobalAnalytics'));
-const AdminUserManagement = lazy(() => import('./pages/AdminUserManagement'));
-const AdminTenantControl = lazy(() => import('./pages/AdminTenantControl'));
-const BranchSettings = lazy(() => import('./pages/BranchSettings')); // New Route // New Route
-const OwnerDashboard = lazy(() => import('./pages/OwnerDashboard'));
-const DeveloperDashboard = lazy(() => import('./pages/DeveloperDashboard'));
-const BakeryConfig = lazy(() => import('./pages/BakeryConfig'));
-const KitchenDisplay = lazy(() => import('./pages/KitchenDisplay')); // KDS
 import { OrderSyncProvider } from './context/OrderSyncContext';
+
+import { ROUTES } from './config/routes.config';
 
 const queryClient = new QueryClient();
 
-// ...
-
 const AnimatedRoutes = () => {
   const location = useLocation();
+
+  // Helper to render a single route node
+  const renderRoute = (route) => {
+    let element = route.element;
+
+    // 1. Wrap in PageTransition if needed
+    if (route.useTransition) {
+      element = <PageTransition>{element}</PageTransition>;
+    }
+
+    // 2. Wrap in ProtectedRoute if roles are specified
+    // Note: Public routes usually refer to login/register which don't have roles.
+    // If a route has roles, it is protected.
+    if (route.roles && route.roles.length > 0) {
+      element = (
+        <ProtectedRoute allowedRoles={route.roles}>
+          {element}
+        </ProtectedRoute>
+      );
+    }
+
+    return (
+      <Route
+        key={route.path}
+        path={route.path}
+        element={element}
+      />
+    );
+  };
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Public Routes */}
-        <Route path="/login" element={<LogIn />} />
-        <Route path="/register" element={<Register />} />
+        {/* 1. Routes WITHOUT Dashboard Layout (Public, Fullscreen) */}
+        {ROUTES.filter(r => r.layout !== 'dashboard').map(renderRoute)}
 
-        {/* Independent/Full Screen Routes */}
-        <Route path="/kitchen" element={
-          <ProtectedRoute allowedRoles={[ROLES.DEVELOPER, ROLES.OWNER, ROLES.PRODUCTION, ROLES.EMPLOYEE]}>
-            <KitchenDisplay />
-          </ProtectedRoute>
-        } />
-
-        {/* Protected Routes Wrapper */}
+        {/* 2. Routes WITH Dashboard Layout */}
         <Route element={<DashboardLayout />}>
-          {/* Developer Only Route (Hidden) */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />}>
-            <Route path="/dev-dashboard" element={<DevDashboard />} />
-            <Route path="/dashboard/developer" element={<DeveloperDashboard />} />
-            <Route path="/system-health" element={<SystemHealth />} />
-            {/* Admin tools */}
-            <Route path="/admin/owners" element={<AdminOwnerManagement />} />
-            <Route path="/admin/global-analytics" element={<AdminGlobalAnalytics />} />
-            <Route path="/admin/users" element={<AdminUserManagement />} />
-            <Route path="/admin/tenants" element={<AdminTenantControl />} />
-          </Route>
-
-          {/* Owner & Developer Routes */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.DEVELOPER, ROLES.OWNER]} />}>
-            <Route path="/dashboard" element={<PageTransition><Dashboard /></PageTransition>} />
-            <Route path="/dashboard/owner" element={<PageTransition><OwnerDashboard /></PageTransition>} />
-            <Route path="/calendario" element={<PageTransition><Calendar /></PageTransition>} />
-            <Route path="/estadisticas" element={<PageTransition><Statistics /></PageTransition>} />
-            <Route path="/clientes" element={<PageTransition><Clients /></PageTransition>} />
-            <Route path="/inventario" element={<PageTransition><Statistics /></PageTransition>} /> {/* Placeholder for Inventory */}
-            <Route path="/configuracion" element={<PageTransition><BakeryConfig /></PageTransition>} />
-            <Route path="/configuracion/sucursal" element={<PageTransition><BranchSettings /></PageTransition>} />
-          </Route>
-
-          {/* Employee, Owner & Developer (Production & Folios) */}
-          <Route element={<ProtectedRoute allowedRoles={[ROLES.DEVELOPER, ROLES.OWNER, ROLES.EMPLOYEE]} />}>
-            <Route path="/folios" element={<PageTransition><Folios /></PageTransition>} />
-            <Route path="/folio/nuevo" element={<PageTransition><NewFolio /></PageTransition>} />
-            <Route path="/produccion" element={<PageTransition><KanbanBoard /></PageTransition>} />
-            <Route path="/asistente-ia" element={<PageTransition><AiInbox /></PageTransition>} />
-            <Route path="/ia-sesiones/:id" element={<PageTransition><SessionConsole /></PageTransition>} />
-            {/* Fallback for employee dashboard access if needed */}
-          </Route>
+          {ROUTES.filter(r => r.layout === 'dashboard').map(renderRoute)}
 
           {/* Fallback Redirects */}
+          {/* These could also be in config, but keeping simple here */}
           <Route path="/" element={<Navigate to="/folios" replace />} />
           <Route path="*" element={<Navigate to="/folios" replace />} />
         </Route>
@@ -108,22 +73,20 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
-
-
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
           <OrderSyncProvider>
             <SystemLogProvider>
               <ToastProvider>
-                <GlobalErrorBoundary>
+                <AppErrorBoundary>
                   <Router>
                     <DevOverlay />
                     <Suspense fallback={<CakeLoader isLoading={true} />}>
                       <AnimatedRoutes />
                     </Suspense>
                   </Router>
-                </GlobalErrorBoundary>
+                </AppErrorBoundary>
               </ToastProvider>
             </SystemLogProvider>
           </OrderSyncProvider>

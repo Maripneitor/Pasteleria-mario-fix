@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import cashClosingService from '../../services/cashClosing.service';
 
 const CashClosing = () => {
     const { auth } = useAuth();
@@ -14,17 +15,11 @@ const CashClosing = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/folios/cash-close?date=${date}`, {
-                headers: {
-                    'Authorization': `Bearer ${auth.token}`
-                }
-            });
-            if (response.ok) {
-                const result = await response.json();
-                setData(result);
-            }
+            const result = await cashClosingService.getCashClosingData(date);
+            setData(result);
         } catch (error) {
             console.error("Error fetching cash close:", error);
+            // Error handling is partly done in service/axios via interceptors/toasts
         } finally {
             setLoading(false);
         }
